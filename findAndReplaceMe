@@ -7,7 +7,7 @@ CERT_LOCALITY="blub"
 CERT_PROVINCE="bla"
 LOGGINGFILE="\/tmp\/mlaps.log"
 DOWNLOADURL="https:\/\/github.com\/lzuba-tgm\/mlaps\/blob\/master\/mlaps_client.sh"
-PATHTOWHEREYOURDOCKERIMAGELIVES="bla"
+PATHTOWHEREYOURDOCKERIMAGELIVES="ghcr.io\/lzuba\/mlaps:master"
 BASEPRODUCTIONPATHTOKEYCLOAK="http:\/\/auth\/auth\/"
 SUPPORTPATH="\/var\/root\/Library\/Application Support"
 
