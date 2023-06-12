@@ -16,7 +16,8 @@ sed -i -- "s/\$YOURCOMPANY/$YOURCOMPANY/g" docker/nginx/mlaps.conf
 sed -i -- "s/\$YOURCOMPANY/$YOURCOMPANY/g" docker/keycloak/dev.json
 sed -i -- "s/\$YOURCOMPANY/$YOURCOMPANY/g" docker/vault/setup.sh
 sed -i -- "s/\$YOURCOMPANY/$YOURCOMPANY/g" app/secrets-dev.json
-sed -i -- "s/\$YOURCOMPANY/$YOURCOMPANY/g" app/starter.py
+sed -i -- "s/\$YOURCOMPANY/$YOURCOMPANY/g" app/config-dev.ini
+sed -i -- "s/\$YOURCOMPANY/$YOURCOMPANY/g" app/config-sample.ini
 sed -i -- "s/\$YOURCOMPANY/$YOURCOMPANY/g" linux_test.sh
 sed -i -- "s/\$YOURCOMPANY/$YOURCOMPANY/g" mlaps_client.sh
 sed -i -- "s/\$YOURCOMPANY/$YOURCOMPANY/g" dev_enroll.sh
@@ -43,7 +44,7 @@ sed -i -- "s/\$DOWNLOADURL/$DOWNLOADURL/g" client_install.sh
 #PATHTOWHEREYOURDOCKERIMAGELIVES
 sed -i -- "s/\$PATHTOWHEREYOURDOCKERIMAGELIVES/$PATHTOWHEREYOURDOCKERIMAGELIVES/g" docker/mlaps/mlaps-prod.Dockerfile
 #BASEPRODUCTIONPATHTOKEYCLOAK
-sed -i -- "s/\$BASEPRODUCTIONPATHTOKEYCLOAK/$BASEPRODUCTIONPATHTOKEYCLOAK/g" app/config.ini
+sed -i -- "s/\$BASEPRODUCTIONPATHTOKEYCLOAK/$BASEPRODUCTIONPATHTOKEYCLOAK/g" app/config-sample.ini
 #SUPPORTPATH
 sed -i -- "s/\$SUPPORTPATH/$SUPPORTPATH/g" mlaps_client.sh
 sed -i -- "s/\$SUPPORTPATH/$SUPPORTPATH/g" dev_enroll.sh

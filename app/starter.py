@@ -8,10 +8,10 @@ from cheroot.wsgi import Server as WSGIServer, PathInfoDispatcher
 from markupsafe import Markup
 
 if __name__ == "__main__":
-    companyName = '$YOURCOMPANY'
     devmode = '-dev' in list(sys.argv)
     contr = Controller.Controller()
     app = Flask(__name__)
+    companyName = contr.getCompanyName()
     #use customsessioninterface to not send cookies on api calls
     app.session_interface = customSessionInterface.CustomSessionInterface()
 

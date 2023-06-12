@@ -64,6 +64,9 @@ class Controller():
         # Shut down the scheduler when exiting the app
         atexit.register(lambda: self.__scheduler.shutdown())
 
+    def getCompanyName(self) -> str:
+	return self.__config["GENERAL"]["company-name"]
+
     def getKeycloakReam(self) -> str:
         return self.__config["KEYCLOAK"]["realm"]
 
