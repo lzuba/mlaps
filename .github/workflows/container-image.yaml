@@ -20,7 +20,9 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v3
-        run: sh findAndReplaceMe
+
+      - name: Install Dependencies
+        run: bash findAndReplaceMe
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
