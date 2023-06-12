@@ -65,7 +65,7 @@ class Controller():
         atexit.register(lambda: self.__scheduler.shutdown())
 
     def getCompanyName(self) -> str:
-	return self.__config["GENERAL"]["company-name"]
+        return self.__config["GENERAL"]["company-name"]
 
     def getKeycloakReam(self) -> str:
         return self.__config["KEYCLOAK"]["realm"]
