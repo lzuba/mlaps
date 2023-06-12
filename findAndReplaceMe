@@ -1,14 +1,14 @@
 #!/bin/bash
 # beware that slashs have to be escaped
-YOURCOMPANY="blablub"
-CERT_COMPANYNAME="blablub llc"
+YOURCOMPANY="foobar"
+CERT_COMPANYNAME="foobar llc"
 CERT_COUNTRY="BL"
 CERT_LOCALITY="blub"
 CERT_PROVINCE="bla"
-LOGGINGFILE="\/some\/path\/to\/logs"
-DOWNLOADURL="\/path\/where\/you\/host\/the\/mlaps\/client\/file"
+LOGGINGFILE="\/tmp\/mlaps.log"
+DOWNLOADURL="https:\/\/github.com\/lzuba-tgm\/mlaps\/blob\/master\/mlaps_client.sh"
 PATHTOWHEREYOURDOCKERIMAGELIVES="bla"
-BASEPRODUCTIONPATHTOKEYCLOAK="blub"
+BASEPRODUCTIONPATHTOKEYCLOAK="http:\/\/auth\/auth\/"
 SUPPORTPATH="\/var\/root\/Library\/Application Support"
 
 #YOURCOMPANY

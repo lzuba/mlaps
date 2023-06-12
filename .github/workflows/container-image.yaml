@@ -46,11 +46,11 @@ jobs:
       - name: Image - Main
         uses: docker/build-push-action@v3
         with:
-          context: .
+          context: app/mlaps
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
-          file: Dockerfile
+          file: mlaps.Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta-main.outputs.tags }}
           labels: ${{ steps.meta-main.outputs.labels }}
