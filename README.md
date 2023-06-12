@@ -1,5 +1,8 @@
-# Mlaps
+# MLAPS
 
+<p align="center">
+  <img src="https://github.com/lzuba-tgm/mlaps/blob/master/app/static/MLAPS.svg" />
+</p>
 
 ## Description
 
@@ -18,7 +21,7 @@ on the client side, mlaps runs a launchdeamon which runs the mlaps_client.sh thr
 
 ## Shoutout
 
-Shoutout to [Joshua D. Miller](https://github.com/joshua-d-miller) who's [macOSLAPS](https://github.com/joshua-d-miller/macOSLAPS) software we first used and inspired us to evolve the idea to a full server-client system. 
+Shoutout to [Joshua D. Miller](https://github.com/joshua-d-miller) who's [macOSLAPS](https://github.com/joshua-d-miller/macOSLAPS) software i first used and inspired us to evolve the idea to a full server-client system. 
 
 ## Installation (Server)
 In order to ensure a clean and easy execution a python virtual environment is used. 
@@ -91,9 +94,8 @@ If mlaps complains about unknown/missing fields in the database, try removing th
 
 ### Production
 
-If you wish, you can use start with the dev environment
-
-For Production we use Puppet to manage the reverse proxy and MySQL db. 
+For Production i recommend something like Puppet to manage the reverse proxy and MySQL db. 
+#### Also you NEED TO build your own mlaps image, since the secrets still need to be added. (see secrets-dev.ini and secrets-dev.json and remove '-dev' from their names)
 When launching into production, ensure a valid role_id and secret_id pair is present in the database, as without it the application can not working properly.
 
 HOW TO INSERT NEW IDS PAIR
