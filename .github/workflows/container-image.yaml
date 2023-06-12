@@ -22,7 +22,7 @@ jobs:
       - name: Check out code
 
       - name: Apply findAndReplaceMe file
-        run: ./findAndReplaceMe
+      - run: ./findAndReplaceMe
 
       - uses: docker/setup-buildx-action@v2
       - name: Set up Docker Buildx
