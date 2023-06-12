@@ -95,7 +95,7 @@ If mlaps complains about unknown/missing fields in the database, try removing th
 ### Production
 
 For Production i recommend something like Puppet to manage the reverse proxy and MySQL db. 
-#### Also you NEED TO build your own mlaps image, since the secrets still need to be added. (see secrets-dev.ini and secrets-dev.json and remove '-dev' from their names)
+Also you NEED TO build your own mlaps image
 When launching into production, ensure a valid role_id and secret_id pair is present in the database, as without it the application can not working properly.
 
 HOW TO INSERT NEW IDS PAIR
@@ -116,3 +116,14 @@ openssl req -newkey rsa:2048 -keyout client.key -out client.csr
 
 cat client.csr | vault write -format=json pki/sign/mlaps common_name="mlaps.YOURCOMPANY.com" csr=- | jq -r .data.certificate > client.crt
 ```
+#### Build your own production mlaps image
+
+Since the secrets still need to be added (and the starting command will be waiting for a local mysql connection), you will need to build your own mlaps image.
+
+To do that you will need the pusblished, unconfigured dev mlaps image from github or your own build dev image.
+
+If you use the published image, you also need to apply the findAndReplaceMe script in order to complete the code base.
+
+Afterwards you will need 'secrets.ini' and 'secrets.json' respectfully with content of their '-dev' versions in the app folder.
+
+Now you can build your own image using the mlaps-prod.Dockerfile in the docker/mlaps folder.
