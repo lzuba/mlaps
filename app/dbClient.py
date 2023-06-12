@@ -132,7 +132,7 @@ class dbClient:
             self.logger.error(e)
             return False
 
- """
+    """
     """
     @orm.db_session
     def getMachinesPasswords(self, mid: uuid.UUID):
