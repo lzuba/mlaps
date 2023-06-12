@@ -1,0 +1,18 @@
+version: "3"
+
+services:
+  nginx:
+    ports:
+     - "443:443"
+
+  vault:
+    ports:
+      - "8200:8200"
+
+  db:
+   ports:
+     - "3306:3306"
+
+  keycloak:
+    ports:
+      - "8080:8080"

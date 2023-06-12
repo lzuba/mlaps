@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}
+   {{ hostName }}
+{% endblock %}
+
+{% block outerContent %}
+<div id="response-div"></div>
+<div id="toast-div"></div>
+{% endblock %}
+
+{% block content %}
+<div class="col-md-4">
+    <div class="row">
+        
+        <div class="col">
+            <h2 style="color: ghostwhite;">Overview</h2>
+            <img src="/static/laptop.png" width="70%" height="auto" alt="Laptop Icon"></img>
+            <h3 style="color: ghostwhite;">{{ hostName }}</h2>
+        </div>
+        <div class="col">
+            <h2 style="color: ghostwhite;">General Info</h2>
+            {{ generalInfo }}
+        </div>
+    </div>
+    <div class="row">
+        <h2 style="color: ghostwhite;">Possible Duplicates:</h2>
+        {{ posDuplicates }}
+    </div>
+</div>
+<div class="col-md-5">
+    <h2 style="color: ghostwhite;">Passwords:</h2>
+    {{ passwords }}
+</div>
+<div class="col-md-3">
+    <h2 style="color: ghostwhite;">Checkins:</h2>
+    {{ checkins }}
+</div>
+{% endblock %}

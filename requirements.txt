@@ -1,0 +1,12 @@
+Flask
+flask_oidc_ex
+itsdangerous==2.0.1
+hvac
+Flask-APScheduler
+pyOpenSSL
+pony
+PyMySQL
+flask-table
+Flask-WTF
+pytest
+cherrypy

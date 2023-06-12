@@ -1,0 +1,59 @@
+stages:
+  - Unit
+  - Build
+  - Start
+  - Testing
+  - Stop
+
+unit-tests:
+  stage: Unit
+  image: python:3.9
+  before_script:
+    - cd app
+    - pip install poetry
+    - poetry config virtualenvs.in-project true
+    - poetry install
+    - source `poetry env info --path`/bin/activate
+  script:
+    - PYTHONPATH="$PYTHONPATH:." pytest -v --color=yes ./test/ --junitxml=report.xml
+  artifacts:
+    when: always
+    expire_in: 1 week
+    paths:
+      - app/report.xml
+    reports:
+      junit: app/report.xml
+
+build:
+  stage: Build
+  image: docker:20.10.21
+  allow_failure: true
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker-compose -f docker-compose.base.yml build
+    - docker-compose -f docker-compose.base.yml push
+
+mlaps-test-up:
+  stage: Start
+  image: docker:20.10.21
+  allow_failure: true
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker-compose -f docker-compose.base.yml -f docker-compose.testing.yml pull
+    - docker-compose -f docker-compose.base.yml -f docker-compose.testing.yml up -d --force-recreate
+
+mlaps-testing:
+  stage: Testing
+  image: docker:20.10.21
+  before_script:
+    - apk add bash curl jq openssl
+  script:
+    - ./linux_test.sh
+
+mlaps-test-down:
+  stage: Stop
+  image: docker:20.10.21
+  allow_failure: true
+  script:
+    - docker-compose -f docker-compose.base.yml -f docker-compose.testing.yml down --volumes
+  when: always

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}
+    MLAPS Main Page
+{% endblock %}
+
+{% block extension %}
+<script src="/static/tablelogic.js"></script>
+{% endblock %}
+
+{% block outerContent %}
+<div id="response-div"></div>
+<div id="toast-div"></div>
+{% endblock %}
+
+{% block content %}
+<div>
+    <input id="search-input" type="search" placeholder="Begin Typing To Search ..." style="width: 20%" oninput="searchTable()">
+    <button class="btn btn-danger btn-sm" hx-get="{{ url_for('.handleDisableUnenrolledMachines') }}" hx-target="#toast-div" hx-swap="beforeend">Disable all not enrolled machines</button>
+</div>
+{{ table }}
+{% endblock %}
