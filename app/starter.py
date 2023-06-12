@@ -83,7 +83,7 @@ if __name__ == "__main__":
     #Returns the legal notice page
     @app.route("/legal_notice", methods=['GET'])  # decorator
     def legal_notice():
-	return make_response(render_template("legal-notice.html"))
+        return make_response(render_template("legal-notice.html"))
 
     """
     Handles the index call of the website
