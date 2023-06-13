@@ -19,9 +19,11 @@ on the client side, mlaps runs a launchdeamon which runs the mlaps_client.sh thr
 ![Exmaple of the mlaps accesslog page](accesslog-example.png)
 
 
-## Shoutout
+## Mentions
 
 Shoutout to [Joshua D. Miller](https://github.com/joshua-d-miller) who's [macOSLAPS](https://github.com/joshua-d-miller/macOSLAPS) software i first used and inspired us to evolve the idea to a full server-client system. 
+
+[Laptop icons created by Vectors Market - Flaticon](https://www.flaticon.com/free-icons/laptop)
 
 ## Installation (Server)
 In order to ensure a clean and easy execution a python virtual environment is used. 
