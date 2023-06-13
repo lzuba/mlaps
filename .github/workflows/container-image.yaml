@@ -38,7 +38,7 @@ jobs:
         id: meta-main
         uses: docker/metadata-action@v4
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ghcr.io/lzuba/mlaps-server
           tags: |
             type=raw,value=snapshot,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
             type=semver,pattern={{version}}
