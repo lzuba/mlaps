@@ -1,18 +1,38 @@
-# MLAPS
+# MLAPS - macOS Local Admin Password Solution
 
 <p align="center">
-  <img src="https://github.com/lzuba-tgm/mlaps/blob/master/app/static/MLAPS.svg" />
+  <img src="https://github.com/lzuba-tgm/mlaps/blob/master/app/static/MLAPS.svg" width="200" />
 </p>
 
 ## Description
 
-Mlaps is aimed to replicate the laps functionality found in the windows wolrd, but for macOS.
+MLAPS brings the Local Administrator Password Solution (LAPS) functionality from the Windows world to macOS. It replicates the approach originally created for Windows environments, where local admin-level accounts have randomized passwords stored on a central server accessible to the admin team.
 
-Mlaps is a self-contained, secure, automated and modern server-client system where you can manage and view admin passwords for your mac fleet.
+Key Features
 
-Mlaps provides you with a webinterface, where admins can view local admin passwords, issue sharing links for end users and expire the current password.
+ - 🌱 **Web Interface** - provides a web interface for admins to get access to passwords, view clients last check-in status, manually perform rotation or a password or generate temporary password sharing links.
+ - 🙈 **Password Encryption** - stores client passwords encrypted using AES-GCM with a 256-bit AES key and a 96-bit nonce.
+ - ⏰ **Automatic Password Rotation** - performs rotation of client machine passwords: automatically on a weekly basis or one hour after an admin accessed the password.
+ - 🪪 **Client Authentication** - clients authenticate using mutual TLS (mTLS), once enrolled.
+ - 📝 **Audit Log** - All access to passwords of client machines is logged to a audit log, including a timestamp & the authenicated username.
+ - 🔑 **Hashicorp Vault** - securely authenticates clients & stores passwords encrypted using [Hashicorp Vault](https://www.vaultproject.io/)
 
-on the client side, mlaps runs a launchdeamon which runs the mlaps_client.sh three times a day
+
+## Design
+
+### Client Enrollment
+
+Clients [enroll to MLAPS by generating a CSR for a local client certificate](https://github.com/lzuba/mlaps/blob/master/mlaps_client.sh#L98) and submit it to the `/enroll` endpoint of MLAPS. Client hostname and serial number are included with the submission. On the server side a unique ID (UUID) is generated. The UUID & CSR are sent to Hashicorp Vault. The signed certificate is returned to the client. The UUID which is also added as attribute to the client's certificate is used as primary key & to further identify the client.
+
+### Check-in
+
+Clients periodically check-in with MLAPS. The client will authenticate using its client certificate. The server might trigger a password rotation.
+
+### Password Rotation
+
+To ensure a client password is always on record, the server will generate proposed client passwords, the client will set the password and acknowledge the new password upon success. On the server side, passwords are stored with a history. MLAPS automatically rotates client machine passwords on a weekly basis or by manual trigger of an admin user, or 1 hour after a password is accessed by an admin on the server.
+
+### Web Interface
 
 ![Exmaple of the mlaps mainpage](mainpage-example.png)
 
