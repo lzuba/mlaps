@@ -18,8 +18,6 @@ if __name__ == "__main__":
     app.config.update(
         {
             "SECRET_KEY": os.urandom(24),
-            #    'TESTING': True,
-            #    'DEBUG': True,
             "OIDC_COOKIE_SECURE": True,
             "OIDC_CLIENT_SECRETS": "app/secrets.json",
             "OIDC_ID_TOKEN_COOKIE_SECURE": True,
@@ -35,8 +33,7 @@ if __name__ == "__main__":
     )
 
     if '-dev' in list(sys.argv):
-        app.config.update({"OVERWRITE_REDIRECT_URI": f"https://mlaps.{companyName}.com:8443/oidc_callback",
-                           "OIDC_CLIENT_SECRETS": "app/secrets-dev.json"})
+        app.config.update({"OIDC_CLIENT_SECRETS": "app/secrets-dev.json"})
 
     # initialise flask extensions
     oidc = OpenIDConnect(app)
