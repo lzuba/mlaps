@@ -2,7 +2,7 @@ name: "Build Container Image"
 on:
   push:
     branches:
-      - main
+      - master
     tags:
       - "*"
     paths-ignore:
