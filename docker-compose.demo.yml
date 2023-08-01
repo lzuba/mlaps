@@ -1,0 +1,108 @@
+version: "3"
+
+volumes:
+  shared:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+
+services:
+  nginx:
+    # can be used like seen in production, if you want
+    image: nginx
+    #build:
+    #  context: ./docker/nginx
+    #  dockerfile: nginx-demo.Dockerfile
+    depends_on:
+      vault:
+        condition: service_healthy
+      mlaps:
+        condition: service_started
+    ports:
+        - "80:80"
+        - "443:443"
+    volumes:
+      - "shared:/shared:ro"
+      - "./docker/nginx/mlaps-demo.conf:/etc/nginx/conf.d/mlaps.conf"
+    environment:
+     - NGINX_HOST=mlaps.foobar.com
+     - NGINX_PORT=443
+
+  mlaps:
+    image: ghcr.io/lzuba/mlaps-demo-server:master
+    depends_on:
+      vault:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    extra_hosts:
+      - "mlaps.foobar.com:127.0.0.1"
+
+  vault:
+    build:
+      context: ./docker/vault
+      dockerfile: vault.Dockerfile
+    entrypoint: ["/bin/bash", "/init.sh"]
+    cap_add:
+      - IPC_LOCK
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - "./docker/vault/setup-demo.sh:/init.sh:ro"
+      - "./docker/vault/policy.hcl:/policy.hcl:ro"
+      - "shared:/tmp/shared:rw"
+    environment:
+      - "VAULT_ADDR=http://127.0.0.1:8200"
+      - "VAULT_DEV_ROOT_TOKEN_ID=dev"
+    healthcheck:
+      test: ["CMD", "curl", "http://127.0.0.1:8200/v1/sys/seal-status"]
+      interval: 10s
+      retries: 10
+      start_period: 15s
+
+  db:
+   image: mysql:8-debian
+   command: --default-authentication-plugin=mysql_native_password
+   restart: always
+   cap_add:
+     - SYS_NICE
+   environment:
+     MYSQL_ROOT_PASSWORD: dev
+     MYSQL_USER: dev
+     MYSQL_PASSWORD: dev
+     MYSQL_DATABASE: dev
+   healthcheck:
+     test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+     timeout: 2s
+     retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak
+    restart: always
+    command: ["start-dev","-Dkeycloak.migration.action=import",
+     "-Dkeycloak.migration.provider=singleFile",
+     "-Dkeycloak.migration.file=/opt/jboss/keycloak/dev.json",
+     "-Dkeycloak.migration.strategy=OVERWRITE_EXISTING"]
+    volumes:
+      - ./docker/keycloak/demo.json:/opt/jboss/keycloak/dev.json
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_VENDOR=H2
+      - PROXY_ADDRESS_FORWARDING=true
+      - "KEYCLOAK_ADMIN=dev"
+      - "KEYCLOAK_ADMIN_PASSWORD=dev"
+    healthcheck:
+      test: ["CMD", "curl", "-X", "GET", "http://localhost:8080/auth/"]
+      interval: 10s
+      retries: 10
+      timeout: 2s
+      start_period: 2s
+    networks:
+       default:
+        aliases:
+         - auth
+
