@@ -34,9 +34,11 @@ To ensure a client password is always on record, the server will generate propos
 
 ### Web Interface
 
-![Exmaple of the mlaps mainpage](mainpage-example.png)
+![Exmaple of the mlaps mainpage](mainpage-demo.png)
 
-![Exmaple of the mlaps accesslog page](accesslog-example.png)
+![Exmaple of a mlaps detailed machine page](detailed-machine-demo.png)
+
+![Exmaple of the mlaps accesslog page](accesslog-demo.png)
 
 
 ## Mentions
@@ -71,6 +73,25 @@ If you dont want homebrew or manage dependencies otherwise, you'll need:
 
 
 ## SETUP
+
+### Demo Setup
+
+If you quickly want to take a peek into a running mlaps enviroment (with a bit relaxed security in regard to certificates), you can spin up a demo setup.
+
+1. Ensure Docker is running and you have a internet connection (for pulling all images)
+2. Navigate into the project main folder
+3. Ensure you have the following entries in your hosts file
+```
+mlaps.foobar.com  127.0.0.1
+auth              127.0.0.1
+```
+4. Run the following command to start the demo setup.
+```
+docker-compose -f docker-compose.demo.yml up --build
+```
+Once all containers are running, you can access Mlaps at https://mlaps.foobar.com
+
+Depending on your browser's privacy and security setting you may need to acknowlegde warnings about unknown certificates, but be assured you are not accessing shady websites and are only browsing local sites.
 
 ### Dev Enviroment
 
