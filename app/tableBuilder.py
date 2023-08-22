@@ -27,7 +27,7 @@ class TableBuilder():
         items = list()
         for entry in data:
             items.append(AccessEntry(**entry))
-        logging.debug(sort_by)
+        logging.getLogger('mlaps').debug(sort_by)
         # renders the table with all parameters given and the generated rows
         return AccessTable(self.get_sorted_by(items, sort=sort_by, reverse=(sort_reverse == 'desc')), classes=['table table-striped table-dark'], sort_by=sort_by, sort_reverse=(sort_reverse == 'desc'))
     """
@@ -39,7 +39,7 @@ class TableBuilder():
         # creates compatible row objects from the table object
         items = list()
         for entry in data: items.append(MachineEntry(**entry))
-        logging.debug(sort_by)
+        logging.getLogger('mlaps').debug(sort_by)
         # renders the table with all parameters given and the generated rows
         return MachineTable(self.get_sorted_by(items, sort=sort_by, reverse=(sort_reverse == 'desc')), classes=['table table-striped table-dark'], sort_by=sort_by, sort_reverse=(sort_reverse == 'desc'))
 

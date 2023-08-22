@@ -59,7 +59,7 @@ if __name__ == "__main__":
         @functools.wraps(func)
         def inner(*args, **kwargs):
             user = get_oidc_user_info()
-            logging.debug(user)
+            logging.getLogger('mlaps').debug(user)
             if user["groups"] is None: return "Not Authorized"
             if 'webaccess_mlaps' in user['groups']: return func(*args, **kwargs)
             return "Not Authorized"
@@ -151,7 +151,7 @@ if __name__ == "__main__":
         if contr.checkUUID(uid):
             #uuid is known
             res: list = contr.handleCheckin(uid, hostname, serialnumber)
-            logging.debug(res)
+            logging.getLogger('mlaps').debug(res)
             #logging.debug(res[0] == True)
             if res[0] == True:
                 resp = make_response(jsonify({"response":"ok"}), 200)
@@ -345,7 +345,19 @@ if __name__ == "__main__":
         res = contr.handleDetailedMachine(mid)
         return make_response(res)
 
-    logging.info("Server initialized")
+
+    """
+
+    """
+    @oidc.require_login
+    @checkPermission
+    @app.route('/admin', methods=['GET'])
+    def handleAdminPage():
+        db, vault, log = contr.handleAdmin()
+        return make_response(render_template("admin.html", dbconnection=db, vaultconnection=vault, log=log))
+
+
+    logging.getLogger('mlaps').info("Server initialized")
 
     if devmode:
         app.run(host="0.0.0.0", debug=True, port=8080)  # to allow for debugging and auto-reload

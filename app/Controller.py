@@ -1,6 +1,5 @@
-import datetime
-import sys, base64, configparser, dbClient, hsmclient, logger, atexit, uuid, time, flask, tableBuilder, secrets, random, \
-    hashlib
+import datetime, json ,sys, base64, configparser, dbClient, hsmclient, logger, atexit, uuid, time, flask, tableBuilder, \
+    secrets, random, hashlib, logging
 from apscheduler.schedulers.background import BackgroundScheduler
 from pony import orm
 from flask_wtf.csrf import generate_csrf
@@ -23,9 +22,10 @@ class Controller():
             self.__config.read('app/config.ini')
             self.__secrets.read('app/secrets.ini')
         # Starts the logger with a custom format
-        self.__logger = logger.Logger(self.__config['LOGGING']['LEVEL'])
+        self.logger = logger.Logger(self.__config['LOGGING']['LEVEL'],self.__config['LOGGING']['LOGFOLDER'],
+                                    int(self.__config['LOGGING']['LOGLINERETENTION']))
         # Setup the mysql connection with the pony ORM
-        self.__mysqlConx = dbClient.dbClient(self.__logger, self.__config['MYSQL']['username'],
+        self.__mysqlConx = dbClient.dbClient(self.__config['MYSQL']['username'],
                                              self.__secrets['MYSQL']['password'],
                                              self.__config['MYSQL']['host'], self.__config['MYSQL']['database'],
                                              self.devmode)
@@ -48,8 +48,8 @@ class Controller():
                 time.sleep(5)
 
         # Login to the HSM and obtain a token
-        self.__hsmClient = hsmclient.HSMClient(self.__logger, self.getHSMHost(), hsmData['role_id'],
-                                               hsmData['secret_id'])
+        self.__hsmClient = hsmclient.HSMClient(self.getHSMHost(), hsmData.role_id,
+                                               hsmData.secret_id)
 
         #After the hsm authenticated, renew secrets immediately in order to ensure correct timing between renewals
         #self.renewHsmSecret()
@@ -126,15 +126,15 @@ class Controller():
     Returns an error message if any off the steps fail or a simple "ok" in a list if everything succeeded
     """
     def handleUpdatePassword(self, password: str, uid: str, updateSessionID: str) -> list:
-        self.__logger.debug(updateSessionID)
-        self.__logger.debug(self.__updateSessions)
+        logging.getLogger('mlaps').debug(updateSessionID)
+        logging.getLogger('mlaps').debug(self.__updateSessions)
 
         # Check if a password is needed and if the given updatesessionid is currently registered to the provided UUID
         if not uid in self.__updateSessions:
-            self.__logger.warn(f"Rejecting updatePassword payload of {uid} because the latest password is not expired")
+            logging.getLogger('mlaps').warning(f"Rejecting updatePassword payload of {uid} because the latest password is not expired")
             return [False, "Password not expired"]
         elif not updateSessionID == self.__updateSessions.get(uid):
-            self.__logger.warn(f"Rejecting updatePassword payload of {uid} because the client sent an invalid updateSessionID")
+            logging.getLogger('mlaps').warning(f"Rejecting updatePassword payload of {uid} because the client sent an invalid updateSessionID")
             return [False, "Wrong UpdateSessionID was sent"]
 
         with orm.db_session:
@@ -143,13 +143,13 @@ class Controller():
             if machine:
                 # Check if the hsm token is still valid for the next vault request
                 self.checkHSMTokenValidity()
-                self.__logger.debug(f"Trying to encrypt Password: '{password}'")
+                logging.getLogger('mlaps').debug(f"Trying to encrypt Password: '{password}'")
                 # Sends the cleartext to the hsm and trys to read the response
                 password_encrpy: dict = self.__hsmClient.hsm_enc(password)
                 try:
                     password_encrpy: str = password_encrpy['data']['ciphertext']
                 except KeyError:
-                    self.__logger.warn(
+                    logging.getLogger('mlaps').warning(
                         f"Rejecting updatePassword payload of {uid} because HSM failed to encrypt the password")
                     return [False, "Failed to encrypt the password in the HSM"]
                 # Save the encrypted password to the database
@@ -158,11 +158,11 @@ class Controller():
                 if res:
                     return [True, "ok"]
                 else:
-                    self.__logger.warn(
+                    logging.getLogger('mlaps').warning(
                         f"Rejecting updatePassword payload of {uid} because the db wasn't able to save the new password")
                     return [False, "Failed to set new Password"]
             else:
-                self.__logger.warn(
+                logging.getLogger('mlaps').warning(
                     f"Rejecting updatePassword payload of {uid} because the supplied uid (from the cert) was not found")
                 return [False, "Machine not found"]
 
@@ -173,23 +173,23 @@ class Controller():
     If the request isn't valid, an appropriated error is returned
     """
     def handleUpdatePasswordConfirmation(self, res,  uid: str, updateSessionID: str):
-        self.__logger.debug(updateSessionID)
-        self.__logger.debug(self.__updateSessions)
+        logging.getLogger('mlaps').debug(updateSessionID)
+        logging.getLogger('mlaps').debug(self.__updateSessions)
 
         # Check if a password is needed and if the given updatesessionid is currently registered to the provided UUID
         if not uid in self.__updateSessions:
-            self.__logger.warn(f"Rejecting updatePasswordConfirmation payload of {uid} because the latest password is not expired")
+            logging.getLogger('mlaps').warning(f"Rejecting updatePasswordConfirmation payload of {uid} because the latest password is not expired")
             return [False, "Password not expired"]
         elif not updateSessionID == self.__updateSessions.get(uid):
-            self.__logger.warn(f"Rejecting updatePasswordConfirmation payload of {uid} because the client sent an invalid updateSessionID")
+            logging.getLogger('mlaps').warning(f"Rejecting updatePasswordConfirmation payload of {uid} because the client sent an invalid updateSessionID")
             return [False, "Wrong UpdateSessionID was sent"]
 
         if self.__mysqlConx.updatePasswordSecStage(res, uuid.UUID(uid)):
-            self.__logger.debug(f"Successfully set new status for newest password for machine {uid}")
+            logging.getLogger('mlaps').debug(f"Successfully set new status for newest password for machine {uid}")
             self.__updateSessions.pop(uid)
             return [True, "Ok"]
         else:
-            self.__logger.warn(f"Rejecting updatePasswordConfirmation payload of {uid} because the db waa unable "
+            logging.getLogger('mlaps').warning(f"Rejecting updatePasswordConfirmation payload of {uid} because the db waa unable "
                                f"to get unconfirmed password or set to new status on the password")
             return [False, "Failed to get unconfirmed password or set to new status on the password"]
 
@@ -214,12 +214,12 @@ class Controller():
                     return hsmResp["data"]["certificate"]
                 else:
                     # error occurred
-                    self.__logger.warn(f"Failed to sign the CSR in vault")
+                    logging.getLogger('mlaps').warning(f"Failed to sign the CSR in vault")
                     self.__mysqlConx.removeMachine(uid)
                     return "Failed to sign the CSR in vault"
             else:
                 # error occurred
-                self.__logger.error(f"Failed to create new machine in the DB")
+                logging.getLogger('mlaps').error(f"Failed to create new machine in the DB")
             return "Failed to create new machine in the DB"
 
     """
@@ -229,8 +229,8 @@ class Controller():
         with orm.db_session:
             hsmData = self.__mysqlConx.readHSMSecret()
         # recreate the hsmclient with the same login credentials
-        self.__hsmClient = hsmclient.HSMClient(self.__logger, self.getHSMHost(), hsmData['role_id'],
-                                               hsmData['secret_id'])
+        self.__hsmClient = hsmclient.HSMClient(self.getHSMHost(), hsmData.role_id,
+                                               hsmData.secret_id)
         return self.__hsmClient.isAuthenticated
 
     """
@@ -245,16 +245,16 @@ class Controller():
             newHsmSecret = self.__hsmClient.hsm_get_new_secret()
             try:
                 # assembly a new auth-secret entry to be saved
-                newHsmEntry = [lastHsmLine['role_id'], newHsmSecret["data"]["secret_id"]]
-                self.__logger.debug(newHsmEntry)
+                newHsmEntry = [lastHsmLine.role_id, newHsmSecret["data"]["secret_id"]]
+                logging.getLogger('mlaps').debug(newHsmEntry)
             except KeyError:
-                self.__logger.warn("Failed to get a new secret id from the hsm")
+                logging.getLogger('mlaps').warning("Failed to get a new secret id from the hsm")
                 return self.__hsmClient.isAuthenticated
             # save the new credentials to the database
             res = self.__mysqlConx.updateHsmSecret(newHsmEntry)
-        self.__logger.info(f"Tried renewing HSM secret with result: {res}")
+        logging.getLogger('mlaps').info(f"Tried renewing HSM secret with result: {res}")
         # recreate the hsmclient with these login credentials
-        self.__hsmClient = hsmclient.HSMClient(self.__logger, self.getHSMHost(), newHsmEntry[0], newHsmEntry[1])
+        self.__hsmClient = hsmclient.HSMClient(self.getHSMHost(), newHsmEntry[0], newHsmEntry[1])
         return self.__hsmClient.isAuthenticated
 
     """
@@ -267,11 +267,11 @@ class Controller():
             if mid != "":
                 latestPassword = self.__mysqlConx.getLatestSuccessfulPassword(uuid.UUID(mid))
                 returntext = f"Machine {mid}"
-                self.__logger.debug("Searching for password by machine id")
+                logging.getLogger('mlaps').debug("Searching for password by machine id")
             if pwid != "":
                 latestPassword = self.__mysqlConx.readPassword(uuid.UUID(pwid))
                 returntext = f"Password {pwid}"
-                self.__logger.debug("Searching for password by password id")
+                logging.getLogger('mlaps').debug("Searching for password by password id")
             if latestPassword:
                 # if a password was found,
                 # log the attempt to decrypt the password in the audit log
@@ -292,11 +292,11 @@ class Controller():
         try:
             self.checkHSMTokenValidity()
         except ValueError as err:
-            self.__logger.warn(str(err))
+            logging.getLogger('mlaps').warning(str(err))
             return "Decryption failed, HSM Token invalid"
         # try to decrypt the password in the hsm
         jsonResponse = self.__hsmClient.hsm_dec(password.password)
-        self.__logger.debug(jsonResponse)
+        logging.getLogger('mlaps').debug(jsonResponse)
         # try to read the password from the hsm response
         try:
             clearText = jsonResponse['data']['plaintext']
@@ -315,11 +315,11 @@ class Controller():
             if mid != "":
                 pw = self.__mysqlConx.getLatestSuccessfulPassword(uuid.UUID(mid))
                 returntext = f"for Machine {mid}"
-                self.__logger.debug("Expiring Password by Machine id")
+                logging.getLogger('mlaps').debug("Expiring Password by Machine id")
             if pwid != "":
                 pw = self.__mysqlConx.readPassword(uuid.UUID(pwid))
                 returntext = pwid
-                self.__logger.debug("Expiring Password by Password id")
+                logging.getLogger('mlaps').debug("Expiring Password by Password id")
             if pw:
                 res = self.__mysqlConx.expirePassword(pw)
                 if res:
@@ -355,21 +355,24 @@ class Controller():
         return self.__tableBuilder.getAccessTable(sort_by=sort_col, sort_reverse=direction)
 
     """
-    Needs to be called before or after making a request to the HSM, since one token can only be used ten times.
+    Needs to be called before or after making a request to the HSM, since one token can only be used n times.
     Returns None if the token is still valid or the token has been successfully renewed.
     Raises an Exception if the token renewal failed
     """
-    def checkHSMTokenValidity(self):
+    def checkHSMTokenValidity(self, uses=1):
+        if uses <= 0:
+            logging.getLogger('mlaps').warning(f"Illegal use of method (uses = {uses}), aborting")
+            return
         # keep one use reserved for +-1 mistake and renewal
-        if self.__hsmClient.uses >= self.hsmTokenMaxUses - 1:
+        if self.__hsmClient.uses >= self.hsmTokenMaxUses - uses:
             res = self.reLoginHsm()
             if res:
-                self.__logger.debug("HSM Token has been renewed with the last permitted request")
+                logging.getLogger('mlaps').debug("HSM Token has been renewed with the last permitted request")
                 return
             else:
                 raise ValueError("HSM Token is over its permitted uses and failed to renew")
         else:
-            self.__logger.debug(f"HSM Token is still valid, current uses: {self.__hsmClient.uses}")
+            logging.getLogger('mlaps').debug(f"HSM Token is still valid, current uses: {self.__hsmClient.uses}")
             return
 
     # https://www.hacksplaining.com/prevention/weak-session
@@ -415,18 +418,18 @@ class Controller():
     Then it returns True if the creationTime of the entry difference is under 15 minutes compared to current time otherwise it returns False
     """
     def checkSharePasswordStr(self, randomStr) -> bool:
-        self.__logger.debug(self.__shareLinks)
-        self.__logger.debug(randomStr)
+        logging.getLogger('mlaps').debug(self.__shareLinks)
+        logging.getLogger('mlaps').debug(randomStr)
         if randomStr in self.__shareLinks:
             entry: dict = self.__shareLinks[randomStr]
             curTime: datetime.datetime = datetime.datetime.utcnow()
             if (entry['creationTime'] + datetime.timedelta(minutes=15)) > curTime:
-                self.__logger.info("Found valid share link")
+                logging.getLogger('mlaps').info("Found valid share link")
                 return True
-            self.__logger.warn("Found expired share link")
+            logging.getLogger('mlaps').warning("Found expired share link")
             return False
         else:
-            self.__logger.warn("No valid share link found")
+            logging.getLogger('mlaps').warning("No valid share link found")
             return False
 
     """
@@ -437,7 +440,7 @@ class Controller():
     def handleSharePassword(self, rid: str, pw: str) -> str:
         entry: dict = self.__shareLinks[rid]
         if pw != entry['pw']:
-            self.__logger.info("Wrong password was send for share password request" + rid)
+            logging.getLogger('mlaps').info("Wrong password was send for share password request" + rid)
             return "Wrong Password"
         with orm.db_session:
             password: dbClient.dbClient.Password = self.__mysqlConx.getLatestSuccessfulPassword(uuid.UUID(entry['mid']))
@@ -451,7 +454,7 @@ class Controller():
         with orm.db_session:
             machines = self.__mysqlConx.getNonDisabledNonEnrolledMachines()
             c = machines.count()
-            self.__logger.debug(f"Found {c} non disabled non enrolled machines, going to disable")
+            logging.getLogger('mlaps').debug(f"Found {c} non disabled non enrolled machines, going to disable")
             for machine in machines:
                 machine.disabled = True
             orm.commit()
@@ -474,3 +477,14 @@ class Controller():
 
         return flask.render_template("machine.html", generalInfo=infoTable, hostName=machine.hostname,
                                     posDuplicates=dupTable, passwords=pwTable, checkins=checkTable)
+
+    """
+    """
+    @orm.db_session
+    def handleAdmin(self):
+        db = self.__mysqlConx.dbClient.exists("SELECT * FROM auth_secret")
+        self.checkHSMTokenValidity(uses=0)
+        vaultResult = self.__hsmClient.checkConnection()
+        log = self.logger.tail.contents()
+        return "Ok" if db else "Failed to fetch ", "Ok" if vaultResult is True else vaultResult, log
+

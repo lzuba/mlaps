@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}
+    MLAPS Admin Page
+{% endblock %}
+
+{% block content %}
+<h1 style="color: ghostwhite;">Mlaps Status</h1>
+<ul class="list-group">
+    {% if dbconnection == 'Ok' %}
+        <li class="list-group-item list-group-item-success">Database connection is Ok &#9989;</li>
+    {% else %}
+        <li class="list-group-item list-group-item-danger">Database connection is not ok &#10060;<br>{{ dbconnection }}</li>
+    {% endif %}
+    
+    {% if vaultconnection == 'Ok' %}
+        <li class="list-group-item list-group-item-success">Vault connection is Ok &#9989;</li>
+    {% else %}
+        <li class="list-group-item list-group-item-danger">Vault connection is not ok &#10060;<br>{{ vaultconnection }}</li>
+    {% endif %}    
+
+</ul>
+<h1 style="color: ghostwhite;">Latest Log</h1>
+
+<pre class="pre-scrollable" style="color: ghostwhite; white-space: pre-wrap;"><code>{{ log }}</code></pre>
+
+<!-- <ul class="list-group">
+    <li class="list-group-item list-group-item-danger"> {{ log }} </li>
+</ul>
+-->
+
+{% endblock %}

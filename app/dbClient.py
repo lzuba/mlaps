@@ -9,9 +9,8 @@ from pony.orm import desc
 class dbClient:
     dbClient = orm.Database()
 
-    def __init__(self, logger, username, password, host, database, isdev):
+    def __init__(self, username, password, host, database, isdev):
         self.devmode = isdev
-        self.logger = logger
         self.dbClient.bind(
             provider="mysql", host=host, user=username, passwd=password, db=database
         )
@@ -60,14 +59,8 @@ class dbClient:
     ##### Vault Methods #####
 
     @orm.db_session
-    def readHSMSecret(self):
-        try:
-            return self.__convertQueryToDict(
-                self.Auth_secret.select().order_by(lambda c: orm.desc(c.id)).limit(1)
-            )[0]
-        except Exception as e:
-            self.logger.error(e)
-            return None
+    def readHSMSecret(self) -> Auth_secret:
+        return self.Auth_secret.select().order_by(lambda c: orm.desc(c.id)).limit(1)[:][0]
 
     @orm.db_session
     def updateHsmSecret(self, entry):
@@ -75,7 +68,7 @@ class dbClient:
             newSecret = self.Auth_secret(role_id=entry[0], secret_id=entry[1])
             return True
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
             return False
 
     ##### Read Methods #####
@@ -83,9 +76,9 @@ class dbClient:
     @orm.db_session
     def readMachine(self, uid):
         try:
-            return self.Machine.get(id=uid)
-        except Exception as e:
-            self.logger.error(e)
+            return self.Machine.get(uid)
+        except orm.ObjectNotFound as e:
+            logging.getLogger('mlaps').error(e)
             return False
 
     @orm.db_session
@@ -93,7 +86,7 @@ class dbClient:
         try:
             return self.Password.get(id=uid)
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
             return False
 
     @orm.db_session
@@ -108,7 +101,7 @@ class dbClient:
             else:
                 return None
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
             return None
 
     @orm.db_session
@@ -117,7 +110,7 @@ class dbClient:
             allMachines = self.Machine.select().where(lambda m: m.disabled == False)
             return self.__convertQueryToDict(allMachines)
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
             return False
 
     """
@@ -129,7 +122,7 @@ class dbClient:
             allAccess = self.AccessLog.select()
             return self.__convertQueryToDict(allAccess)
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
             return False
 
     """
@@ -139,7 +132,7 @@ class dbClient:
         try:
             return self.Password.select(lambda c: c.machine_id.id == mid).order_by(lambda d: orm.desc(d.password_received))
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
             return False
 
     """
@@ -149,7 +142,7 @@ class dbClient:
         try:
             return self.Checkin.select(lambda c: c.mid.id == mid).order_by(lambda d: orm.desc(d.checkin_time))
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
             return False
 
     """
@@ -159,7 +152,7 @@ class dbClient:
         try:
             return self.Machine.select(lambda c: c.hostname == hostname)
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
             return False
 
     """
@@ -169,7 +162,7 @@ class dbClient:
         try:
             return self.Machine.select(lambda c: c.serialnumber == serialnumber)
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
             return False
 
     """
@@ -177,17 +170,17 @@ class dbClient:
     @orm.db_session
     def getMachinesPosDuplicates(self, mid: uuid.UUID):
         try:
-            self.logger.debug(mid)
+            logging.getLogger('mlaps').debug(mid)
             machine = self.readMachine(mid)
             posDuplList = list()
             posDuplList.extend(self.getMachinesByHostname(machine.hostname)[:])
             posDuplList.extend(self.getMachinesBySerialnumber(machine.serialnumber)[:])
-            self.logger.debug(posDuplList)
+            logging.getLogger('mlaps').debug(posDuplList)
             #exclude own machine from result, since it had to be in both queries
             #also exclude already disabled machines
             return set([posDupl for posDupl in posDuplList if not posDupl.id == machine.id and not posDupl.disabled])
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
             return False
 
     """
@@ -198,7 +191,7 @@ class dbClient:
         try:
             return self.Machine.select().where(lambda m: m.disabled is False and m.enroll_success is False)
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
             return False
 
     @orm.db_session
@@ -214,7 +207,7 @@ class dbClient:
         if password:
             return self.checkPasswordValidity(password)
         else:
-            self.logger.warn(f"Unable to find password for given UUID {uid}")
+            logging.getLogger('mlaps').warning(f"Unable to find password for given UUID {uid}")
         return False
 
     @orm.db_session
@@ -247,7 +240,7 @@ class dbClient:
             orm.commit()
             return True
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
             return False
 
     @orm.db_session
@@ -258,7 +251,7 @@ class dbClient:
             orm.commit()
             return True
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
             return False
 
     @orm.db_session
@@ -269,7 +262,7 @@ class dbClient:
                 pw.status = 'Expired'
                 orm.commit()
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
 
     @orm.db_session
     def updatePasswordStatus(self, pw):
@@ -277,7 +270,7 @@ class dbClient:
             pw.status = 'Seen'
             orm.commit()
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
 
     @orm.db_session
     def updatePasswordSecStage(self, res : str, mid):
@@ -286,14 +279,14 @@ class dbClient:
         )
         if pw:
             pw = pw.limit(1)[0]
-            if not res: self.logger.warn(f"Machine {mid} has reported failed password change with result {res}")
+            if not res: logging.getLogger('mlaps').warning(f"Machine {mid} has reported failed password change with result {res}")
             try:
                 pw.password_set = True if not res.startswith("Failed to") else False
                 orm.commit()
                 self.maintainLastFiveSuccessfulPasswords(mid)
                 return True
             except Exception as e:
-                self.logger.error(e)
+                logging.getLogger('mlaps').error(e)
             self.maintainLastFiveSuccessfulPasswords(mid)
             return False
         else:
@@ -313,7 +306,7 @@ class dbClient:
             orm.commit()
             return True
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
             return False
 
     ##### Create Methods #####
@@ -328,7 +321,7 @@ class dbClient:
             newCheckin = self.Checkin(uuid=uid, mid=mid, checkin_time=cTime)
             return True
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
             return False
 
     @orm.db_session
@@ -353,7 +346,7 @@ class dbClient:
             )
             return True
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
             return False
 
     @orm.db_session
@@ -369,7 +362,7 @@ class dbClient:
             )
             return True
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
             return False
 
 
@@ -384,7 +377,7 @@ class dbClient:
             )
             return True
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
             return False
 
 
@@ -399,10 +392,10 @@ class dbClient:
                 orm.commit()
                 return True
             else:
-                self.logger.warn(f"Failed to delete machine with id {uid}")
+                logging.getLogger('mlaps').warning(f"Failed to delete machine with id {uid}")
                 return False
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
             return False
 
 
@@ -451,7 +444,7 @@ class dbClient:
                 lambda c: orm.desc(c.password_received)
             )
             if len(pws) <= n:
-                self.logger.info(f"Machine {mid} has less or equal to {n} passwords saved, returning all")
+                logging.getLogger('mlaps').info(f"Machine {mid} has less or equal to {n} passwords saved, returning all")
                 return pws
             vcount = 0
             wantedPws = []
@@ -468,7 +461,7 @@ class dbClient:
                 if len(wantedPws) == 0:
                     pw.delete()
                     rmcount += 1
-            self.logger.debug(f"Removed {rmcount} password from machine {mid}")
+            logging.getLogger('mlaps').debug(f"Removed {rmcount} password from machine {mid}")
         except Exception as e:
-            self.logger.error(e)
+            logging.getLogger('mlaps').error(e)
             return None

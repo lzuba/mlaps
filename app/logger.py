@@ -1,26 +1,50 @@
-import os, logging
+import os, logging, collections
+from logging.handlers import RotatingFileHandler
+from typing import Union
+
 
 class Logger():
-    def __init__(self, level):
-        os.makedirs("logs/", exist_ok=True)
-        logging.basicConfig(filename="logs/log.log", level=level,
-                            format='%(asctime)s %(levelname)s : %(message)s')
+    def __init__(self, level: Union[int, str], logLocation: str, numberOfLinesToRetain: int):
+        os.makedirs(logLocation, exist_ok=True)
 
-    def error(self,message):
-        logging.error(message)
-        #print(message)
+        self.tail = TailLogger(numberOfLinesToRetain)
+        formatter = logging.Formatter('%(asctime)s - %(name)s@%(funcName)s - %(levelname)s - %(message)s')
 
-    def debug(self,message):
-        logging.debug(message)
-        #print(message)
+        log_handler = self.tail.log_handler
+        log_handler.setFormatter(formatter)
+        logFile_handler = RotatingFileHandler(f"{logLocation.rstrip(os.sep)}/mlaps.log", encoding='utf8',maxBytes=100000, backupCount=1)
+        logFile_handler.setFormatter(formatter)
 
-    def warn(self,message):
-        logging.warning(message)
-        #print(message)
+        rootLogger = logging.getLogger()
+        rootLogger.addHandler(log_handler)
+        rootLogger.addHandler(logFile_handler)
+        rootLogger.setLevel(int(level) if str.isnumeric(level) else level)
 
-    def info(self,message):
-        logging.info(message)
-        #print(message)
+
+#https://stackoverflow.com/a/37967421
+class TailLogHandler(logging.Handler):
+
+    def __init__(self, log_queue):
+        logging.Handler.__init__(self)
+        self.log_queue = log_queue
+
+    def emit(self, record):
+        self.log_queue.append(self.format(record))
+
+
+class TailLogger(object):
+
+    def __init__(self, maxlen):
+        self._log_queue = collections.deque(maxlen=maxlen)
+        self._log_handler = TailLogHandler(self._log_queue)
+
+    def contents(self):
+        return '\n'.join(self._log_queue)
+
+    @property
+    def log_handler(self):
+        return self._log_handler
+
 
 # CRITICAL = 50
 # FATAL = CRITICAL

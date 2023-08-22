@@ -1,7 +1,7 @@
-import hvac, base64
+from typing import Union
+
+import hvac, base64, logging
 from os import environ as env
-false = False
-true = True
 
 class HSMClient():
     # tracks the uses of the current hsm token, to know when to renew it
@@ -9,13 +9,21 @@ class HSMClient():
     # keeps track of the current status to the vault without using a token usage everything checking
     isAuthenticated = False
 
-    def __init__(self, logger, host, role_id, secret_id):
-        self.logger = logger
+    def checkConnection(self) -> Union[bool, str]:
+        if not self.isAuthenticated: return "Not initialized/Failed to initialize hsmclient"
+        self.uses += 2
+        sealStatus = bool(self.__hsmClient.seal_status['sealed'])
+        authenticationStatus = self.__hsmClient.is_authenticated()
+        logging.getLogger('mlaps').debug(f"Connection to Vault is authenticated: {authenticationStatus}, Vault is sealed: {sealStatus}")
+        self.isAuthenticated = authenticationStatus
+        return True
+
+    def __init__(self, host, role_id, secret_id):
         try:
             # try to initialize the hsm connection with the given credentials
             self.isAuthenticated = self.__hsmlogin(host, role_id, secret_id)
         except Exception as e:
-            self.logger.error(str(e))
+            logging.getLogger('mlaps').error(str(e))
 
     def __hsmlogin(self,url,role,secret):
         # calls the hsm library to login
@@ -27,7 +35,7 @@ class HSMClient():
                 )
         # check if the credentials worked
         if self.__hsmClient.is_authenticated():
-            self.logger.debug("Successfully authenticated to Vault")
+            logging.getLogger('mlaps').debug("Successfully authenticated to Vault")
             return True
         else:
             raise Exception('error, could not authenticate')
@@ -41,7 +49,7 @@ class HSMClient():
         try:
             # base64 encode the given password, hsm expects the text to be encoded
             encod_pw = str(base64.b64encode(bytes(plaintext,"utf-8")),"utf-8")
-            self.logger.debug(encod_pw)
+            logging.getLogger('mlaps').debug(encod_pw)
             # increment the hsm token usage, even if it fails it counts as a request
             self.uses += 1
             # actually send the request to encrypt to the hsm
@@ -49,11 +57,11 @@ class HSMClient():
                 name = 'client-passwords',
                 plaintext = encod_pw,
             )
-            self.logger.debug(cipher)
+            logging.getLogger('mlaps').debug(cipher)
             # return the entire response
             return cipher
         except Exception as e:
-            self.logger.error(str(e))
+            logging.getLogger('mlaps').error(str(e))
         return False
 
     """
@@ -70,11 +78,11 @@ class HSMClient():
                 name = 'client-passwords',
                 ciphertext = cipher,
             )
-            self.logger.debug(plain)
+            logging.getLogger('mlaps').debug(plain)
             # return the entire response
             return plain
         except Exception as e:
-            self.logger.error(str(e))
+            logging.getLogger('mlaps').error(str(e))
         return False
     """
     Sends the given csr to the hsm for signing with the given common_name to be set as the cn
@@ -89,11 +97,11 @@ class HSMClient():
                 csr=csr,
                 common_name=common_name
             )
-            self.logger.debug(signed_cert)
+            logging.getLogger('mlaps').debug(signed_cert)
             # return the entire response
             return signed_cert
         except Exception as e:
-            self.logger.error(str(e))
+            logging.getLogger('mlaps').error(str(e))
         return False
 
     """
@@ -107,11 +115,11 @@ class HSMClient():
             resp = self.__hsmClient.auth.approle.generate_secret_id(
                 role_name='client-passwords',
             )
-            self.logger.debug(resp)
+            logging.getLogger('mlaps').debug(resp)
             # return the entire response
             return resp
         except Exception as e:
-            self.logger.error(str(e))
+            logging.getLogger('mlaps').error(str(e))
         return False
 
 
