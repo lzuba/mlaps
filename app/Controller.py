@@ -479,11 +479,12 @@ class Controller():
                                     posDuplicates=dupTable, passwords=pwTable, checkins=checkTable)
 
     """
+    
     """
     @orm.db_session
     def handleAdmin(self):
         db = self.__mysqlConx.dbClient.exists("SELECT * FROM auth_secret")
-        self.checkHSMTokenValidity(uses=0)
+        self.checkHSMTokenValidity(uses=2)
         vaultResult = self.__hsmClient.checkConnection()
         log = self.logger.tail.contents()
         return "Ok" if db else "Failed to fetch ", "Ok" if vaultResult is True else vaultResult, log

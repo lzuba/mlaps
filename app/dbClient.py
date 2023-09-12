@@ -76,7 +76,7 @@ class dbClient:
     @orm.db_session
     def readMachine(self, uid):
         try:
-            return self.Machine.get(uid)
+            return self.Machine.get(id=uid)
         except orm.ObjectNotFound as e:
             logging.getLogger('mlaps').error(e)
             return False
