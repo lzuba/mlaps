@@ -1,8 +1,8 @@
 #!/PATH/TO/YOUR/PYTHON3
 import functools
 import os, logging, Controller, sys, base64, customSessionInterface
-from flask_oidc_ex import OpenIDConnect
-from flask import Flask, request, jsonify, make_response, send_from_directory, render_template, Response
+from flask_oidc import OpenIDConnect
+from flask import Flask, request, jsonify, make_response, send_from_directory, render_template, Response, session
 import flask_wtf.csrf
 from cheroot.wsgi import Server as WSGIServer, PathInfoDispatcher
 from markupsafe import Markup
@@ -21,7 +21,6 @@ if __name__ == "__main__":
             "OIDC_COOKIE_SECURE": True,
             "OIDC_CLIENT_SECRETS": "app/secrets.json",
             "OIDC_ID_TOKEN_COOKIE_SECURE": True,
-            "OIDC_REQUIRE_VERIFIED_EMAIL": True,
             "OIDC_CLOCK_SKEW": 3600,
             "OVERWRITE_REDIRECT_URI": f"https://mlaps.{companyName}.com/oidc_callback",
             "OIDC_RESOURCE_SERVER_VALIDATION_MODE": "online",
@@ -42,10 +41,9 @@ if __name__ == "__main__":
 
     def get_oidc_user_info() -> dict:
         if oidc.user_loggedin:
-            info = oidc.user_getinfo(["groups", "preferred_username", "email"])
-            username = info.get("preferred_username")
-            email = info.get("email")
-            groups = info.get("groups")
+            username = session['oidc_auth_profile']["preferred_username"]
+            email = session['oidc_auth_profile']["email"]
+            groups = session['oidc_auth_profile']["groups"]
             return {"username": username, "email": email, "groups": groups}
         else:
             return None

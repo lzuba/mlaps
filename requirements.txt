@@ -1,6 +1,6 @@
 Flask
-flask_oidc_ex
-itsdangerous==2.0.1
+flask_oidc
+itsdangerous
 hvac
 Flask-APScheduler
 pyOpenSSL
