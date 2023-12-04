@@ -8,18 +8,18 @@ export PATH="/usr/local/bin/:/usr/local/sbin/:/opt/homebrew/bin:/opt/homebrew/sb
 SUPPORT="$SUPPORTPATH"
 ADMIN_USER_NAME="admin"
 ADMIN_USER_HOME="/Users/$ADMIN_USER_NAME"
-MLAPS_ENDPOINT="https://mlaps.$YOURCOMPANY.com/api"                           # MLAPS HOST
-MLAPS_CA="com.$YOURCOMPANY.mlaps"                                             # MLAPS_CA
-WEBSERVER_FILE="$SUPPORT/mlaps-web.pem"                             # Path to CA file  *TODO* write CA to each host with jamf
+MLAPS_ENDPOINT="https://mlaps.$YOURCOMPANY.com/api"                 # MLAPS HOST
+MLAPS_CA="com.$YOURCOMPANY.mlaps"                                   # MLAPS_CA
+CA_FILE="$SUPPORT/mlaps-ca.pem"                                     # Path to CA file
 PW_FILE="$SUPPORT/mlaps-password"                                   # Path to Backup Password File
 CSR_FILE="$SUPPORT/mlaps-csr"                                       # Path to CSR
 CRT_FILE="$SUPPORT/mlaps-crt"                                       # Path to CRT
 KEY_FILE="$SUPPORT/mlaps-key"                                       # Path to KEY
 UPDATE_ID_FILE="$SUPPORT/mlaps-updateid"                            # Path to KEY
-LOG_FILE="$LOGGINGFILE"                                            # Path to logfile
+LOG_FILE="$LOGGINGFILE"                                             # Path to logfile
 SN=$(system_profiler SPHardwareDataType | awk '/Serial/{ print $4 } ')  # Serial number
 HN=$(hostname)                                                          # Hostname
-SUBJ="/C=$CERT_COUNTRY/O=LAPS/OU=${SN}"                                            # CSR Subject
+SUBJ="/C=$CERT_COUNTRY/O=LAPS/OU=${SN}"                                 # CSR Subject
 PID_FILE="/var/run/mlaps.pid"                                           # Path to the pid file
 
 # Settings
@@ -116,6 +116,7 @@ function enroll(){
   local PAYLOAD="{\"csr\":\"$CSR\", \"sn\":\"$SN\", \"hn\":\"$HN\"}"
 
   (curl                             \
+    --cacert $CA_FILE                \
     --request POST                    \
     --url "$MLAPS_ENDPOINT/enroll"     \
     --retry $CURL_N_RETRIES             \
@@ -150,6 +151,7 @@ function checkin(){
   local PAYLOAD="{\"sn\":\"$SN\", \"hn\":\"$HN\"}"
 
   local CHECKIN_DATA=$(curl        \
+    --cacert $CA_FILE                \
     --request POST                   \
     --cert "$CRT_FILE"                \
     --key  "$KEY_FILE"                 \
@@ -192,6 +194,7 @@ function send_pw(){
 
   local PW_DATA=$(curl             \
     --request POST                   \
+    --cacert $CA_FILE                \
     --cert "$CRT_FILE"                \
     --key "$KEY_FILE"                  \
     --data "$PAYLOAD"                   \
@@ -258,6 +261,7 @@ function send_pw_res(){
   local PAYLOAD="{\"res\":\"$1\", \"updateSessionID\":\"$UPDATEID\"}"
   local PW_DATA=$(curl             \
     --request POST                   \
+    --cacert $CA_FILE                \
     --cert "$CRT_FILE"                \
     --key "$KEY_FILE"                  \
     --data "$PAYLOAD"                   \
@@ -305,8 +309,15 @@ function set_pw(){
  }
 
  function main(){
+   for var in "$@"
+   do
+       if [ "$var" == "-v" ]; then
+         set -x
+       fi
+   done
+
    #check/wait for a internet connection
-   while ! curl -Is https://mlaps.$YOURCOMPANY.com &> /dev/null ; do
+   while ! curl --cacert $CA_FILE -Is https://mlaps.$YOURCOMPANY.com &> /dev/null ; do
      sleep 1
    done
 
@@ -350,5 +361,5 @@ function set_pw(){
 
 # for testing...(works like if __name__==main in python
 [[ "${#BASH_SOURCE[@]}" -eq 1 ]] \
-  && retry "$N_RETRIES" "$T_RETRIES" main \
+  && retry "$N_RETRIES" "$T_RETRIES" main $@ \
   || { echo "Happy testing!" ; }
