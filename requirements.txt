@@ -1,4 +1,4 @@
-Flask
+Flask==2.3.1
 flask_oidc
 itsdangerous
 hvac
