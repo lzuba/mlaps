@@ -103,7 +103,7 @@ function enroll(){
     -nodes             \
     -newkey rsa:2048    \
     -keyout "$KEY_FILE"    \
-    -subj   "$SUBJ" | tee "$CSR_FILE" | base64 -i - ; exit ${PIPESTATUS[0]})
+    -subj   "$SUBJ" | tee "$CSR_FILE" | openssl base64 -e ; exit ${PIPESTATUS[0]})
 
   if [ $? ]; then
     jamflog "Generated CSR for enrollment!"
