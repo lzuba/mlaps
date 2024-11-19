@@ -39,6 +39,9 @@ T_RETRIES=3
 #Runtime Data
 UPDATEID=""
 
+#Security
+BASIC_AUTH="username:password"
+
 function panic(){
   # rm pidfile
   cleanupPid
@@ -115,6 +118,11 @@ function enroll(){
 
   local PAYLOAD="{\"csr\":\"$CSR\", \"sn\":\"$SN\", \"hn\":\"$HN\"}"
 
+  local extra_options=()
+  if [[ test -n $BASIC_AUTH ]]; then
+    extra_options+=(-u "$BASIC_AUTH")
+  fi
+
   (curl                             \
     --cacert $CA_FILE                \
     --request POST                    \
@@ -124,6 +132,7 @@ function enroll(){
     --retry-delay $CURL_DELAY             \
     --retry-max-time $CURL_MAX_RETRY_TIME  \
     -H 'Content-Type: application/json'     \
+    "${extraArgs[@]}"                        \
     --data "$PAYLOAD" | jq -r '.response' | tee "$CRT_FILE";  exit ${PIPESTATUS[0]} ;)
 
   if [ $? ]; then
