@@ -8,7 +8,8 @@ export PATH="/usr/local/bin/:/usr/local/sbin/:/opt/homebrew/bin:/opt/homebrew/sb
 SUPPORT="$SUPPORTPATH"
 ADMIN_USER_NAME="admin"
 ADMIN_USER_HOME="/Users/$ADMIN_USER_NAME"
-MLAPS_ENDPOINT="https://mlaps.$YOURCOMPANY.com/api"                 # MLAPS HOST
+MLAPS_HOSTNAME="https://mlaps.$YOURCOMPANY.com"                     # MLAPS HOST
+MLAPS_ENDPOINT="$MLAPS_HOSTNAME/api"                                # MLAPS API
 MLAPS_CA="com.$YOURCOMPANY.mlaps"                                   # MLAPS_CA
 CA_FILE="$SUPPORT/mlaps-ca.pem"                                     # Path to CA file
 PW_FILE="$SUPPORT/mlaps-password"                                   # Path to Backup Password File
@@ -91,7 +92,7 @@ trap 'panic' \
   SIGKILL SIGBUS SIGSEGV SIGSYS SIGPIPE SIGALRM SIGTERM SIGURG \
   SIGSTOP SIGTSTP SIGCONT SIGTTIN SIGTTOU SIGIO SIGXCPU \
   SIGXFSZ SIGVTALRM SIGPROF SIGWINCH SIGUSR1 SIGUSR2
-  trap 'errlog' ERR                                                     # Traps errors that aren't handled and logs them without exiting
+trap 'errlog' ERR                                                     # Traps errors that aren't handled and logs them without exiting
 
 # create pid file ($pid > file)
 # exit if exists
@@ -326,7 +327,7 @@ function set_pw(){
    done
 
    #check/wait for a internet connection
-   while ! curl --cacert $CA_FILE -Is https://mlaps.$YOURCOMPANY.com &> /dev/null ; do
+   while ! curl --cacert $CA_FILE -Is $MLAPS_HOSTNAME &> /dev/null ; do
      sleep 1
    done
 
