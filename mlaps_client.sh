@@ -52,9 +52,26 @@ function panic(){
 
 # cleanup pidfile if process is not running anymore
 function cleanupPid(){
-  pid=$(cat $PID_FILE)
-  if test -n $pid && ! ps -p $pid ; then
-    rm $PID_FILE
+  if [ -f $PID_FILE ]; then
+    PID=$(cat $PID_FILE)
+    ps -p $PID > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+      echo "Process already running"
+      exit 1
+    else
+      ## Process not found assume not running
+      echo $$ > $PID_FILE
+      if [ $? -ne 0 ]; then
+        echo "Could not create PID file"
+        exit 1
+      fi
+    fi
+  else
+    echo $$ > $PID_FILE
+    if [ $? -ne 0 ]; then
+      echo "Could not create PID file"
+      exit 1
+    fi
   fi
 }
 
@@ -125,7 +142,7 @@ function enroll(){
   fi
 
   (curl                             \
-    --cacert $CA_FILE                \
+    --cacert "$CA_FILE"              \
     --request POST                    \
     --url "$MLAPS_ENDPOINT/enroll"     \
     --retry $CURL_N_RETRIES             \
@@ -161,7 +178,7 @@ function checkin(){
   local PAYLOAD="{\"sn\":\"$SN\", \"hn\":\"$HN\"}"
 
   local CHECKIN_DATA=$(curl        \
-    --cacert $CA_FILE                \
+    --cacert "$CA_FILE"             \
     --request POST                   \
     --cert "$CRT_FILE"                \
     --key  "$KEY_FILE"                 \
@@ -203,8 +220,8 @@ function send_pw(){
   local PAYLOAD="{\"Success_Status\":\"$1\", \"Password\":\"$2\", \"updateSessionID\":\"$UPDATEID\"}"
 
   local PW_DATA=$(curl             \
-    --request POST                   \
-    --cacert $CA_FILE                \
+    --request POST                  \
+    --cacert "$CA_FILE"              \
     --cert "$CRT_FILE"                \
     --key "$KEY_FILE"                  \
     --data "$PAYLOAD"                   \
@@ -270,8 +287,8 @@ function send_pw_res(){
   jamflog $1
   local PAYLOAD="{\"res\":\"$1\", \"updateSessionID\":\"$UPDATEID\"}"
   local PW_DATA=$(curl             \
-    --request POST                   \
-    --cacert $CA_FILE                \
+    --request POST                  \
+    --cacert "$CA_FILE"              \
     --cert "$CRT_FILE"                \
     --key "$KEY_FILE"                  \
     --data "$PAYLOAD"                   \
@@ -327,7 +344,7 @@ function set_pw(){
    done
 
    #check/wait for a internet connection
-   while ! curl --cacert $CA_FILE -Is $MLAPS_HOSTNAME &> /dev/null ; do
+   while ! curl --cacert "$CA_FILE" -Is $MLAPS_HOSTNAME &> /dev/null ; do
      sleep 1
    done
 
