@@ -137,7 +137,7 @@ function enroll(){
   local PAYLOAD="{\"csr\":\"$CSR\", \"sn\":\"$SN\", \"hn\":\"$HN\"}"
 
   local extra_options=()
-  if [[ test -n $BASIC_AUTH ]]; then
+  if [[ -n $BASIC_AUTH ]]; then
     extra_options+=(-u "$BASIC_AUTH")
   fi
 
