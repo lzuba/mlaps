@@ -1,7 +1,7 @@
 ARG vault_version=${VAULT_VERSION:-latest}
-FROM vault:${vault_version}
+FROM hashicorp/vault:${vault_version}
 
-RUN apk update && apk upgrade && apk add bash jq openssl curl mysql-client
+RUN apk update && apk upgrade && apk add bash jq openssl curl mysql-client mariadb-connector-c
 
 ENV VAULT_ADDR="http://127.0.0.1:8200"
 

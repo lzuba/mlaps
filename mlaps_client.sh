@@ -134,6 +134,7 @@ function enroll(){
     return 1
   fi
 
+  CSR=$(echo $CSR|tr -d '\n ')
   local PAYLOAD="{\"csr\":\"$CSR\", \"sn\":\"$SN\", \"hn\":\"$HN\"}"
 
   local extra_options=()
