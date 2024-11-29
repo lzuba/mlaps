@@ -69,6 +69,13 @@ if [ ! -f "/tmp/shared/INITIALIZED" ]; then
       sleep 1s
     done
 
+    mysql -u dev -h db -pdev dev -e 'CREATE TABLE `auth_secret` (
+      `id` bigint NOT NULL AUTO_INCREMENT,
+      `role_id` varchar(255) NOT NULL,
+      `secret_id` varchar(255) NOT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB'
+
     mysql -u dev -h db -pdev dev -e "insert into auth_secret (role_id,secret_id) values ($ROLE_ID, $SECRET_ID);"
 
     touch /tmp/shared/INITIALIZED
