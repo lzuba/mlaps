@@ -80,6 +80,11 @@ if __name__ == "__main__":
     def legal_notice():
         return make_response(render_template("legal-notice.html"))
 
+    #simple healthcheck
+    @app.route("/ping", methods=['GET'])  # decorator
+    def healthCheck():
+        return "pong"
+
     """
     Handles the index call of the website
     Requires a valid client SSL certificate and the correct oidc role
