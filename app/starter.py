@@ -5,7 +5,6 @@ from flask_oidc import OpenIDConnect
 from flask import Flask, request, jsonify, make_response, send_from_directory, render_template, Response, session
 import flask_wtf.csrf
 from cheroot.wsgi import Server as WSGIServer, PathInfoDispatcher
-from google.auth import default
 from markupsafe import Markup
 
 if __name__ == "__main__":
