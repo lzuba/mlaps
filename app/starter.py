@@ -154,7 +154,7 @@ if __name__ == "__main__":
         if not parsedDN: return "Failed to read certificate correctly", 410
         uid: str = next((dnPart[2:] for dnPart in sum(parsedDN, []) if dnPart.startswith("CN=")), ("000uidNotFound"))
         if uid == "uidNotFound": return "Failed to read uid from certificate", 411
-
+        logging.getLogger('mlaps').info(f"handling checkin for uuid:{uid}")
         res: list = contr.handleCheckin(uid, hostname, serialnumber)
         logging.getLogger('mlaps').debug(res)
         if res[0] == True:
