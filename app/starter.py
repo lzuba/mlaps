@@ -151,7 +151,7 @@ if __name__ == "__main__":
         hostname = json_data["hn"]
         #check if claimed machine is valid
         parsedDN: str = distinguishedname.string_to_dn(request.headers.get("Ssl-Client", "dnNotFound"))
-        uid: str = next((x for x in sum(parsedDN, []) if x.startswith("CN=")), ("uidNotFound"))
+        uid: str = next((dnPart[2:] for dnPart in sum(parsedDN, []) if dnPart.startswith("CN=")), ("000uidNotFound"))
         if contr.checkUUID(uid):
             #uuid is known
             res: list = contr.handleCheckin(uid, hostname, serialnumber)
