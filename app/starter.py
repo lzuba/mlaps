@@ -150,8 +150,10 @@ if __name__ == "__main__":
         serialnumber = json_data["sn"]
         hostname = json_data["hn"]
         #check if claimed machine is valid
-        parsedDN: str = distinguishedname.string_to_dn(request.headers.get("Ssl-Client", "dnNotFound"))
+        parsedDN = distinguishedname.string_to_dn(request.headers.get("Ssl-Client", "dnNotFound"))
+        if not parsedDN: return "Failed to read certificate correctly", 410
         uid: str = next((dnPart[2:] for dnPart in sum(parsedDN, []) if dnPart.startswith("CN=")), ("000uidNotFound"))
+        if uid == "uidNotFound": return "Failed to read uid from certificate", 411
         if contr.checkUUID(uid):
             #uuid is known
             res: list = contr.handleCheckin(uid, hostname, serialnumber)
