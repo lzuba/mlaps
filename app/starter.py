@@ -1,10 +1,11 @@
 #!/PATH/TO/YOUR/PYTHON3
 import functools
-import os, logging, Controller, sys, base64, customSessionInterface
+import os, logging, Controller, sys, base64, customSessionInterface, distinguishedname
 from flask_oidc import OpenIDConnect
 from flask import Flask, request, jsonify, make_response, send_from_directory, render_template, Response, session
 import flask_wtf.csrf
 from cheroot.wsgi import Server as WSGIServer, PathInfoDispatcher
+from google.auth import default
 from markupsafe import Markup
 
 if __name__ == "__main__":
@@ -150,7 +151,8 @@ if __name__ == "__main__":
         serialnumber = json_data["sn"]
         hostname = json_data["hn"]
         #check if claimed machine is valid
-        uid: str = request.headers["Ssl-Client"].split(",")[0].split("=")[1]
+        parsedDN: str = distinguishedname.string_to_dn(request.headers["Ssl-Client"])
+        uid: str = next((x for x in sum(parsedDN, []) if x.startsWith("CN=")), ("uidNotFound"))
         if contr.checkUUID(uid):
             #uuid is known
             res: list = contr.handleCheckin(uid, hostname, serialnumber)
