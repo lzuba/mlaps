@@ -146,31 +146,27 @@ if __name__ == "__main__":
     @csrf.exempt
     @app.route('/api/checkin', methods=['POST'])
     def handle_checkin():
+        #Parse incoming data
         json_data = request.json
         serialnumber = json_data["sn"]
         hostname = json_data["hn"]
-        #check if claimed machine is valid
         parsedDN = distinguishedname.string_to_dn(request.headers.get("Ssl-Client", "dnNotFound"))
         if not parsedDN: return "Failed to read certificate correctly", 410
         uid: str = next((dnPart[2:] for dnPart in sum(parsedDN, []) if dnPart.startswith("CN=")), ("000uidNotFound"))
         if uid == "uidNotFound": return "Failed to read uid from certificate", 411
-        if contr.checkUUID(uid):
-            #uuid is known
-            res: list = contr.handleCheckin(uid, hostname, serialnumber)
-            logging.getLogger('mlaps').debug(res)
-            #logging.debug(res[0] == True)
-            if res[0] == True:
-                resp = make_response(jsonify({"response":"ok"}), 200)
-                resp.headers['Content-Type'] = 'application/json'
-            elif isinstance(res[1], dict):
-                resp = make_response(jsonify( ({"response": "update", **res[1] }) ),200)
-                resp.headers['Content-Type'] = 'application/json'
-            else:
-                resp = make_response(jsonify(({"response": res[1]})), 400)
-                resp.headers['Content-Type'] = 'application/json'
-        else:
-            resp = make_response(jsonify({"response":"Failed to find UUID"}),400)
+
+        res: list = contr.handleCheckin(uid, hostname, serialnumber)
+        logging.getLogger('mlaps').debug(res)
+        if res[0] == True:
+            resp = make_response(jsonify({"response": "ok"}), 200)
             resp.headers['Content-Type'] = 'application/json'
+        elif isinstance(res[1], dict):
+            resp = make_response(jsonify(({"response": "update", **res[1]})), 200)
+            resp.headers['Content-Type'] = 'application/json'
+        else:
+            resp = make_response(jsonify(({"response": res[1]})), 400)
+            resp.headers['Content-Type'] = 'application/json'
+
         return resp
 
 
@@ -188,6 +184,7 @@ if __name__ == "__main__":
         uid: str = request.headers["Ssl-Client"].split(",")[0].split("=")[1]
         password: str = json_data["Password"]
         updateSessionID: str = json_data["updateSessionID"]
+
         res: list = contr.handleUpdatePassword(password,uid,updateSessionID)
         if res[0] == True:
             resp: Response = make_response(jsonify({"response": res[1]}), 200)
