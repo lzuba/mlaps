@@ -151,7 +151,7 @@ if __name__ == "__main__":
         serialnumber = json_data["sn"]
         hostname = json_data["hn"]
         #check if claimed machine is valid
-        parsedDN: str = distinguishedname.string_to_dn(request.headers["Ssl-Client"])
+        parsedDN: str = distinguishedname.string_to_dn(request.headers.get("Ssl-Client", "dnNotFound"))
         uid: str = next((x for x in sum(parsedDN, []) if x.startsWith("CN=")), ("uidNotFound"))
         if contr.checkUUID(uid):
             #uuid is known
