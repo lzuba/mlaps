@@ -122,7 +122,7 @@ class Controller():
                 else:
                     #usid is updateSessionID
                     usid: str = self.get_random_string()
-                    self.__updateSessions.update({huid: usid})
+                    self.__updateSessions.update({uid: usid})
                     return [False, {'updateSessionID': usid}]
             else:
                 return [False, "Failed to find uid in db"]
