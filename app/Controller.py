@@ -35,6 +35,7 @@ class Controller():
         # Setup runtime tables to store temporary valid sharelinks and valid updatesessionids
         self.__updateSessions = {}
         self.__shareLinks = {}
+        self.__updateSessionSalt = uuid.uuid4().hex
 
         """
         Trys to read the HSM login credentials from the auth-secret table, if no rows are present read the table again in 5 sec indefinitely until a line was successfully read
@@ -108,18 +109,24 @@ class Controller():
         if it is not, return a list with just boolean true
         if it is, return a list with boolean false and a new updatesessionid with is also saved in a dict
     """
-    def handleCheckin(self, uid: uuid.UUID, hn: str, sn: str) -> list:
+    def handleCheckin(self, uid: str, hn: str, sn: str) -> list:
+        huid = uuid.UUID(uid)
         with orm.db_session:
-            self.__mysqlConx.createCheckin(uid)
-            if not self.__mysqlConx.updateMachineInfo(uid, sn, hn):
-                return [False, "Failed to update machine with hostname and serialnumber"]
-            if self.__mysqlConx.checkPasswordValidityString(uid):
-                return [True]
+            if self.checkUUID(huid):
+                # uuid is known
+                self.__mysqlConx.createCheckin(huid)
+                if not self.__mysqlConx.updateMachineInfo(huid, sn, hn):
+                    return [False, "Failed to update machine with hostname and serialnumber"]
+                if self.__mysqlConx.checkPasswordValidityString(huid):
+                    return [True]
+                else:
+                    #usid is updateSessionID
+                    usid: str = self.get_random_string()
+                    self.__updateSessions.update({uid: usid})
+                    return [False, {'updateSessionID': usid}]
             else:
-                #usid is updateSessionID
-                usid: str = self.get_random_string()
-                self.__updateSessions.update({uid: usid})
-                return [False, {'updateSessionID': usid}]
+                return [False, "Failed to find uid in db"]
+
 
     """
     Trys to save the given password with the provided uuid and updateSessionID

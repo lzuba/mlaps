@@ -195,15 +195,15 @@ class dbClient:
             return False
 
     @orm.db_session
-    def checkPasswordValidityString(self, uid):
+    def checkPasswordValidityString(self, uid: uuid.UUID):
         """
         Parameter
-            uid - str: id of the machine
+            uid - UUID: id of the machine
         Check if the latest password for given machine id(uid) is expired
         Return True if the password is not expired and therefore still valid
         Return False if the password is expired and needs to be updated
         """
-        password = self.getLatestSuccessfulPassword(uuid.UUID(uid))
+        password = self.getLatestSuccessfulPassword(uid)
         if password:
             return self.checkPasswordValidity(password)
         else:
