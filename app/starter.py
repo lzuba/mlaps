@@ -151,11 +151,11 @@ if __name__ == "__main__":
         serialnumber = json_data["sn"]
         hostname = json_data["hn"]
         parsedDN = distinguishedname.string_to_dn(request.headers.get("ssl-client", "dnNotFound"))
-        logging.getLogger('mlaps').info(parsedDN)
+        logging.getLogger('mlaps').debug(f"parsed dn from cert: {parsedDN}")
         if not parsedDN: return "Failed to read certificate correctly", 410
-        uid: str = next((dnPart[2:] for dnPart in sum(parsedDN, []) if dnPart.startswith("CN=")), ("uidNotFound"))
+        uid: str = next((dnPart[3:] for dnPart in sum(parsedDN, []) if dnPart.startswith("CN=")), ("uidNotFound"))
         if uid == "uidNotFound": return "Failed to read uid from certificate", 411
-        logging.getLogger('mlaps').info(f"handling checkin for uuid:{uid}")
+        logging.getLogger('mlaps').debug(f"handling checkin for uuid: {uid}")
         res: list = contr.handleCheckin(uid, hostname, serialnumber)
         logging.getLogger('mlaps').debug(res)
         if res[0] == True:
