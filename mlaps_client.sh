@@ -152,7 +152,7 @@ function enroll(){
     --retry-delay $CURL_DELAY             \
     --retry-max-time $CURL_MAX_RETRY_TIME  \
     -H 'Content-Type: application/json'     \
-    "${extraArgs[@]}"                        \
+    "${extra_options[@]}"                        \
     --data "$PAYLOAD" | jq -r '.response' | tee "$CRT_FILE";  exit ${PIPESTATUS[0]} ;)
 
   if [ $? ]; then
@@ -352,9 +352,14 @@ function set_pw(){
        CURL_EXEC='curl --cacert "$CA_FILE"'
        BREW_CURL_FOUND=false
    fi
+  
+   local extra_options=()
+   if [[ -n $BASIC_AUTH ]]; then
+     extra_options+=(-u "$BASIC_AUTH")
+   fi
 
    #check/wait for a internet connection
-   while ! $CURL_EXEC -Is $MLAPS_HOSTNAME &> /dev/null ; do
+   while ! $CURL_EXEC ${extra_options[@]} -Is $MLAPS_HOSTNAME/ping &> /dev/null ; do
      sleep 1
    done
 
