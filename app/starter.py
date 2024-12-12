@@ -289,7 +289,7 @@ if __name__ == "__main__":
     @app.route('/api/createSharelink', methods=['POST'])
     def handleCreateShareLink() -> Response:
         link = contr.handleCreateShareLink(request.form['mid'], request.form['password'],get_oidc_user_info()['username'])
-        resp = make_response(render_template("modal.html", title="Sharable link", body=f"{request.host_url}share_password?rid={link}"))
+        resp = make_response(render_template("modal.html", title="Sharable link", body=f"https://{request.host}/share_password?rid={link}"))
         resp.headers['HX-Trigger'] = 'closeModal'
         return resp
 
