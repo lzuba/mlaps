@@ -6,10 +6,11 @@
                     <h5 class ="modal-title"> Enter a password to protect the sharing link </h5>
                 </div>
                 <div class ="modal-body">
-                    <input id="input-password" type="password" placeholder="Enter password">
                     <form hx-post="/api/createSharelink" hx-swap="innerHTML"  hx-target="#response-div">
-                       <input type="hidden" id="mid" name="mid" value="{{ mid }}">
-                       <input type="hidden" id="password" name="password" required class="form-control">
+                        <input type="hidden" id="mid" name="mid" value="{{ mid }}">
+                        <input id="input-password" type="password" placeholder="Enter password" required class="form-control">
+                        <input type="hidden" id="password" name="password" >
+                        <input type="submit" />
                     </form>
                     <script>
                         const getSHA256Hash = async (input) => {
