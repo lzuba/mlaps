@@ -271,12 +271,7 @@ if __name__ == "__main__":
     @checkPermission
     @app.route('/api/createSharelinkPassword', methods=['GET'])
     def handleCreateShareLinkPassword() -> str:
-        html: Markup = Markup('<form hx-post="/api/createSharelink" hx-swap="innerHTML"  hx-target="#response-div">'\
-               f"<input type='hidden' id='mid' name='mid' value='{request.args.get('mid')}'>"\
-               '<input id="password" name="password" type="password" placeholder="Enter password" required class="form-control">'\
-               '</form>')
-
-        return render_template("modal.html", title="Enter a password to protect the sharing link", raw_body=html)
+        return render_template("admin_sharelink_modal.html", mid=request.args.get('mid'))
 
     """
     Handle the api call to generate a temporary link to share a password

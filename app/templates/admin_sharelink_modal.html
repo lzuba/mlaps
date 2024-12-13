@@ -1,0 +1,38 @@
+<div id="modal-backdrop" class="modal-backdrop fade show" style="display:block;"></div>
+    <div id="modal" class="modal fade show" tabindex="-1" style="display:block;"  _="on closeModal add .closing then wait for animationend then remove me">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class ="modal-header">
+                    <h5 class ="modal-title"> Enter a password to protect the sharing link </h5>
+                </div>
+                <div class ="modal-body">
+                    <input id="input-password" type="password" placeholder="Enter password">
+                    <form hx-post="/api/createSharelink" hx-swap="innerHTML"  hx-target="#response-div">
+                       <input type="hidden" id="mid" name="mid" value="{{ mid }}">
+                       <input type="hidden" id="password" name="password" required class="form-control">
+                    </form>
+                    <script>
+                        const getSHA256Hash = async (input) => {
+                            const textAsBuffer = new TextEncoder().encode(input);
+                            const hashBuffer = await window.crypto.subtle.digest("SHA-256", textAsBuffer);
+                            const hashArray = Array.from(new Uint8Array(hashBuffer));
+                            const hash = hashArray
+                                .map((item) => item.toString(16).padStart(2, "0"))
+                                .join("");
+                            return hash;
+                        };
+                        document.getElementById('input-password').addEventListener('input', hashPassword)
+                        async function hashPassword(){
+                           var pw = document.getElementById('input-password').value
+                           var hashed = await getSHA256Hash(pw);
+                           document.getElementById('password').value = hashed
+                        }
+                    </script>
+                </div>
+                <div class ="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
