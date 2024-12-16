@@ -11,7 +11,7 @@ while ! vault status; do
   sleep 1s
 done
 
-if [ ! -f "/shared/INITIALIZED" ]; then
+if [ ! -f "/tmp/shared/INITIALIZED" ]; then
     echo "Initializing Vault!"
 
     vault login token=dev
@@ -64,13 +64,22 @@ if [ ! -f "/shared/INITIALIZED" ]; then
 
     ROLE_ID=$(vault read -format=json auth/approle/role/client-passwords/role-id | jq .data.role_id)
     SECRET_ID=$(vault write -format=json -f auth/approle/role/client-passwords/secret-id  | jq .data.secret_id)
-    touch /tmp/shared/INITIALIZED
-    while ! mysql -u dev -h db -pdev dev -e "SHOW TABLES;" | grep auth_secret; do
-      echo "Waiting for DB to be ready"
+    while ! mysql -u dev -h db -pdev dev -e "SHOW TABLES;"; do
+      echo "Waiting for DB to be reachable"
       sleep 1s
     done
 
+    mysql -u dev -h db -pdev dev -e 'CREATE TABLE `auth_secret` (
+      `id` bigint NOT NULL AUTO_INCREMENT,
+      `role_id` varchar(255) NOT NULL,
+      `secret_id` varchar(255) NOT NULL,
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB'
+
     mysql -u dev -h db -pdev dev -e "insert into auth_secret (role_id,secret_id) values ($ROLE_ID, $SECRET_ID);"
+
+    touch /tmp/shared/INITIALIZED
+
     #https://stackoverflow.com/questions/28251144/inserting-and-selecting-uuids-as-binary16
     #mysql -u dev -h db -pdev dev -e "insert into machine (id, hostname, serialnumber, enroll_time, enroll_success, disabled) values (UNHEX(REPLACE(\"81a70234-c27b-11ed-a0f5-fb79d6671c6e\", \"-\",\"\")),\"myHostname\",\"T35T1N600M86\",\"2020-01-01 12:12:12.121212\",True,False);"
     
@@ -92,26 +101,31 @@ if [ ! -f "/shared/INITIALIZED" ]; then
     #mysql -u dev -h db -pdev dev -e "insert into AccessLog (id, admin_kurzel, getTime, machine_id, password_id) values (2,'big-admin',2020-01-01 13:26:26.262626,91a5de62-c27b-11ed-b06e-73a6e07e676e,e8359956-c27c-11ed-afb3-c3922f844a02);"
     #mysql -u dev -h db -pdev dev -e "insert into AccessLog (id, admin_kurzel, getTime, machine_id, password_id) values (3,'big-admin',2020-01-01 14:28:28.282828,a0bae91a-c27b-11ed-97d2-efbae491e385,f5b92d0e-c27c-11ed-8728-77b6c3364352);"
 
-    mysql -u dev -h db -pdev dev -e "insert into machine (id, hostname, serialnumber, enroll_time, enroll_success, disabled) values (UNHEX(REPLACE(\"81a70234-c27b-11ed-a0f5-fb79d6671c6e\", \"-\",\"\")),\"myHostname\",\"T35T1N600M86\",\"2020-01-01 12:12:12.121212\",True,False);"
-    mysql -u dev -h db -pdev dev -e "insert into machine (id, hostname, serialnumber, enroll_time, enroll_success, disabled) values (UNHEX(REPLACE(\"91a5de62-c27b-11ed-b06e-73a6e07e676e\", \"-\",\"\")),\"myDifferentHostname\",\"T35T1N600M87\",\"2020-01-01 13:13:13.131313\",True,False);"
-    mysql -u dev -h db -pdev dev -e "insert into machine (id, hostname, serialnumber, enroll_time, enroll_success, disabled) values (UNHEX(REPLACE(\"a0bae91a-c27b-11ed-97d2-efbae491e385\", \"-\",\"\")),\"myVeryDifferentHostname\",\"T35T1N600M88\",\"2020-01-01 14:14:14.141414\",True,False);"
-    mysql -u dev -h db -pdev dev -e "insert into password (id, machine_id, password, status, password_set, password_received, password_expiry) values (UNHEX(REPLACE(\"d2de2708-c27c-11ed-8b81-4b498eb56a2e\", \"-\",\"\")),UNHEX(REPLACE(\"81a70234-c27b-11ed-a0f5-fb79d6671c6e\", \"-\",\"\")),\"MyEncryptedPassword1\",\"Testing\",False,\"2020-01-01 12:24:24.242424\",\"2020-01-01 12:36:36.363636\");"
-    mysql -u dev -h db -pdev dev -e "insert into password (id, machine_id, password, status, password_set, password_received, password_expiry) values (UNHEX(REPLACE(\"dbf70378-c27c-11ed-ac0a-ff5d046c5f60\", \"-\",\"\")),UNHEX(REPLACE(\"81a70234-c27b-11ed-a0f5-fb79d6671c6e\", \"-\",\"\")),\"MyEncryptedPassword2\",\"Testing\",False,\"2020-01-01 12:36:36.363636\",\"2020-01-01 13:00:00.000000\");"
-    mysql -u dev -h db -pdev dev -e "insert into password (id, machine_id, password, status, password_set, password_received, password_expiry) values (UNHEX(REPLACE(\"e8359956-c27c-11ed-afb3-c3922f844a02\", \"-\",\"\")),UNHEX(REPLACE(\"91a5de62-c27b-11ed-b06e-73a6e07e676e\", \"-\",\"\")),\"MyEncryptedPassword3\",\"Testing\",False,\"2020-01-01 13:26:26.262626\",\"2020-01-01 13:39:39.393939\");"
-    mysql -u dev -h db -pdev dev -e "insert into password (id, machine_id, password, status, password_set, password_received, password_expiry) values (UNHEX(REPLACE(\"f04fa1fe-c27c-11ed-bdb5-8fd286cb2228\", \"-\",\"\")),UNHEX(REPLACE(\"91a5de62-c27b-11ed-b06e-73a6e07e676e\", \"-\",\"\")),\"MyEncryptedPassword4\",\"Testing\",False,\"2020-01-01 13:39:39.393939\",\"2020-01-01 14:00:00.000000\");"
-    mysql -u dev -h db -pdev dev -e "insert into password (id, machine_id, password, status, password_set, password_received, password_expiry) values (UNHEX(REPLACE(\"f5b92d0e-c27c-11ed-8728-77b6c3364352\", \"-\",\"\")),UNHEX(REPLACE(\"a0bae91a-c27b-11ed-97d2-efbae491e385\", \"-\",\"\")),\"MyEncryptedPassword5\",\"Testing\",False,\"2020-01-01 14:28:28.282828\",\"2020-01-01 14:42:42.424242\");"
-    mysql -u dev -h db -pdev dev -e "insert into password (id, machine_id, password, status, password_set, password_received, password_expiry) values (UNHEX(REPLACE(\"fa5a818c-c27c-11ed-a703-d75f772b0c57\", \"-\",\"\")),UNHEX(REPLACE(\"a0bae91a-c27b-11ed-97d2-efbae491e385\", \"-\",\"\")),\"MyEncryptedPassword6\",\"Testing\",False,\"2020-01-01 14:42:42.424242\",\"2020-01-01 15:00:00.000000\");"
-    mysql -u dev -h db -pdev dev -e "insert into checkin (id, uuid, mid, checkin_time) values (1,UNHEX(REPLACE(\"81a70234-c27b-11ed-a0f5-fb79d6671c6e\", \"-\",\"\")),UNHEX(REPLACE(\"81a70234-c27b-11ed-a0f5-fb79d6671c6e\", \"-\",\"\")),\"2020-01-01 12:13:12.121212\");"
-    mysql -u dev -h db -pdev dev -e "insert into checkin (id, uuid, mid, checkin_time) values (2,UNHEX(REPLACE(\"81a70234-c27b-11ed-a0f5-fb79d6671c6e\", \"-\",\"\")),UNHEX(REPLACE(\"81a70234-c27b-11ed-a0f5-fb79d6671c6e\", \"-\",\"\")),\"2020-01-01 12:25:24.242424\");"
-    mysql -u dev -h db -pdev dev -e "insert into checkin (id, uuid, mid, checkin_time) values (3,UNHEX(REPLACE(\"91a5de62-c27b-11ed-b06e-73a6e07e676e\", \"-\",\"\")),UNHEX(REPLACE(\"91a5de62-c27b-11ed-b06e-73a6e07e676e\", \"-\",\"\")),\"2020-01-01 13:14:13.131313\");"
-    mysql -u dev -h db -pdev dev -e "insert into checkin (id, uuid, mid, checkin_time) values (4,UNHEX(REPLACE(\"91a5de62-c27b-11ed-b06e-73a6e07e676e\", \"-\",\"\")),UNHEX(REPLACE(\"91a5de62-c27b-11ed-b06e-73a6e07e676e\", \"-\",\"\")),\"2020-01-01 13:27:26.262626\");"
-    mysql -u dev -h db -pdev dev -e "insert into checkin (id, uuid, mid, checkin_time) values (5,UNHEX(REPLACE(\"a0bae91a-c27b-11ed-97d2-efbae491e385\", \"-\",\"\")),UNHEX(REPLACE(\"a0bae91a-c27b-11ed-97d2-efbae491e385\", \"-\",\"\")),\"2020-01-01 14:15:14.141414\");"
-    mysql -u dev -h db -pdev dev -e "insert into checkin (id, uuid, mid, checkin_time) values (6,UNHEX(REPLACE(\"a0bae91a-c27b-11ed-97d2-efbae491e385\", \"-\",\"\")),UNHEX(REPLACE(\"a0bae91a-c27b-11ed-97d2-efbae491e385\", \"-\",\"\")),\"2020-01-01 14:29:28.282828\");"
-    mysql -u dev -h db -pdev dev -e "insert into accesslog (id, admin_kurzel, getTime, machine_id, password_id) values (1,\"big-admin\",\"2020-01-01 12:24:24.242424\",UNHEX(REPLACE(\"81a70234-c27b-11ed-a0f5-fb79d6671c6e\", \"-\",\"\")),UNHEX(REPLACE(\"d2de2708-c27c-11ed-8b81-4b498eb56a2e\", \"-\",\"\")));"
-    mysql -u dev -h db -pdev dev -e "insert into accesslog (id, admin_kurzel, getTime, machine_id, password_id) values (2,\"big-admin\",\"2020-01-01 13:26:26.262626\",UNHEX(REPLACE(\"91a5de62-c27b-11ed-b06e-73a6e07e676e\", \"-\",\"\")),UNHEX(REPLACE(\"e8359956-c27c-11ed-afb3-c3922f844a02\", \"-\",\"\")));"
-    mysql -u dev -h db -pdev dev -e "insert into accesslog (id, admin_kurzel, getTime, machine_id, password_id) values (3,\"big-admin\",\"2020-01-01 14:28:28.282828\",UNHEX(REPLACE(\"a0bae91a-c27b-11ed-97d2-efbae491e385\", \"-\",\"\")),UNHEX(REPLACE(\"f5b92d0e-c27c-11ed-8728-77b6c3364352\", \"-\",\"\")));"
+    # TODO: implement demo mode to populate db a bit somewhere else than vault setup script
+    # while ! mysql -u dev -h db -pdev dev -e "SHOW TABLES;" | grep machine; do
+    #   echo "Waiting for DB to be ready"
+    #   sleep 1s
+    # done
 
-    touch "/shared/INITIALIZED"
+    # mysql -u dev -h db -pdev dev -e "insert into machine (id, hostname, serialnumber, enroll_time, enroll_success, disabled) values (UNHEX(REPLACE(\"81a70234-c27b-11ed-a0f5-fb79d6671c6e\", \"-\",\"\")),\"myHostname\",\"T35T1N600M86\",\"2020-01-01 12:12:12.121212\",True,False);"
+    # mysql -u dev -h db -pdev dev -e "insert into machine (id, hostname, serialnumber, enroll_time, enroll_success, disabled) values (UNHEX(REPLACE(\"91a5de62-c27b-11ed-b06e-73a6e07e676e\", \"-\",\"\")),\"myDifferentHostname\",\"T35T1N600M87\",\"2020-01-01 13:13:13.131313\",True,False);"
+    # mysql -u dev -h db -pdev dev -e "insert into machine (id, hostname, serialnumber, enroll_time, enroll_success, disabled) values (UNHEX(REPLACE(\"a0bae91a-c27b-11ed-97d2-efbae491e385\", \"-\",\"\")),\"myVeryDifferentHostname\",\"T35T1N600M88\",\"2020-01-01 14:14:14.141414\",True,False);"
+    # mysql -u dev -h db -pdev dev -e "insert into password (id, machine_id, password, status, password_set, password_received, password_expiry) values (UNHEX(REPLACE(\"d2de2708-c27c-11ed-8b81-4b498eb56a2e\", \"-\",\"\")),UNHEX(REPLACE(\"81a70234-c27b-11ed-a0f5-fb79d6671c6e\", \"-\",\"\")),\"MyEncryptedPassword1\",\"Testing\",False,\"2020-01-01 12:24:24.242424\",\"2020-01-01 12:36:36.363636\");"
+    # mysql -u dev -h db -pdev dev -e "insert into password (id, machine_id, password, status, password_set, password_received, password_expiry) values (UNHEX(REPLACE(\"dbf70378-c27c-11ed-ac0a-ff5d046c5f60\", \"-\",\"\")),UNHEX(REPLACE(\"81a70234-c27b-11ed-a0f5-fb79d6671c6e\", \"-\",\"\")),\"MyEncryptedPassword2\",\"Testing\",False,\"2020-01-01 12:36:36.363636\",\"2020-01-01 13:00:00.000000\");"
+    # mysql -u dev -h db -pdev dev -e "insert into password (id, machine_id, password, status, password_set, password_received, password_expiry) values (UNHEX(REPLACE(\"e8359956-c27c-11ed-afb3-c3922f844a02\", \"-\",\"\")),UNHEX(REPLACE(\"91a5de62-c27b-11ed-b06e-73a6e07e676e\", \"-\",\"\")),\"MyEncryptedPassword3\",\"Testing\",False,\"2020-01-01 13:26:26.262626\",\"2020-01-01 13:39:39.393939\");"
+    # mysql -u dev -h db -pdev dev -e "insert into password (id, machine_id, password, status, password_set, password_received, password_expiry) values (UNHEX(REPLACE(\"f04fa1fe-c27c-11ed-bdb5-8fd286cb2228\", \"-\",\"\")),UNHEX(REPLACE(\"91a5de62-c27b-11ed-b06e-73a6e07e676e\", \"-\",\"\")),\"MyEncryptedPassword4\",\"Testing\",False,\"2020-01-01 13:39:39.393939\",\"2020-01-01 14:00:00.000000\");"
+    # mysql -u dev -h db -pdev dev -e "insert into password (id, machine_id, password, status, password_set, password_received, password_expiry) values (UNHEX(REPLACE(\"f5b92d0e-c27c-11ed-8728-77b6c3364352\", \"-\",\"\")),UNHEX(REPLACE(\"a0bae91a-c27b-11ed-97d2-efbae491e385\", \"-\",\"\")),\"MyEncryptedPassword5\",\"Testing\",False,\"2020-01-01 14:28:28.282828\",\"2020-01-01 14:42:42.424242\");"
+    # mysql -u dev -h db -pdev dev -e "insert into password (id, machine_id, password, status, password_set, password_received, password_expiry) values (UNHEX(REPLACE(\"fa5a818c-c27c-11ed-a703-d75f772b0c57\", \"-\",\"\")),UNHEX(REPLACE(\"a0bae91a-c27b-11ed-97d2-efbae491e385\", \"-\",\"\")),\"MyEncryptedPassword6\",\"Testing\",False,\"2020-01-01 14:42:42.424242\",\"2020-01-01 15:00:00.000000\");"
+    # mysql -u dev -h db -pdev dev -e "insert into checkin (id, uuid, mid, checkin_time) values (1,UNHEX(REPLACE(\"81a70234-c27b-11ed-a0f5-fb79d6671c6e\", \"-\",\"\")),UNHEX(REPLACE(\"81a70234-c27b-11ed-a0f5-fb79d6671c6e\", \"-\",\"\")),\"2020-01-01 12:13:12.121212\");"
+    # mysql -u dev -h db -pdev dev -e "insert into checkin (id, uuid, mid, checkin_time) values (2,UNHEX(REPLACE(\"81a70234-c27b-11ed-a0f5-fb79d6671c6e\", \"-\",\"\")),UNHEX(REPLACE(\"81a70234-c27b-11ed-a0f5-fb79d6671c6e\", \"-\",\"\")),\"2020-01-01 12:25:24.242424\");"
+    # mysql -u dev -h db -pdev dev -e "insert into checkin (id, uuid, mid, checkin_time) values (3,UNHEX(REPLACE(\"91a5de62-c27b-11ed-b06e-73a6e07e676e\", \"-\",\"\")),UNHEX(REPLACE(\"91a5de62-c27b-11ed-b06e-73a6e07e676e\", \"-\",\"\")),\"2020-01-01 13:14:13.131313\");"
+    # mysql -u dev -h db -pdev dev -e "insert into checkin (id, uuid, mid, checkin_time) values (4,UNHEX(REPLACE(\"91a5de62-c27b-11ed-b06e-73a6e07e676e\", \"-\",\"\")),UNHEX(REPLACE(\"91a5de62-c27b-11ed-b06e-73a6e07e676e\", \"-\",\"\")),\"2020-01-01 13:27:26.262626\");"
+    # mysql -u dev -h db -pdev dev -e "insert into checkin (id, uuid, mid, checkin_time) values (5,UNHEX(REPLACE(\"a0bae91a-c27b-11ed-97d2-efbae491e385\", \"-\",\"\")),UNHEX(REPLACE(\"a0bae91a-c27b-11ed-97d2-efbae491e385\", \"-\",\"\")),\"2020-01-01 14:15:14.141414\");"
+    # mysql -u dev -h db -pdev dev -e "insert into checkin (id, uuid, mid, checkin_time) values (6,UNHEX(REPLACE(\"a0bae91a-c27b-11ed-97d2-efbae491e385\", \"-\",\"\")),UNHEX(REPLACE(\"a0bae91a-c27b-11ed-97d2-efbae491e385\", \"-\",\"\")),\"2020-01-01 14:29:28.282828\");"
+    # mysql -u dev -h db -pdev dev -e "insert into accesslog (id, admin_kurzel, getTime, machine_id, password_id) values (1,\"big-admin\",\"2020-01-01 12:24:24.242424\",UNHEX(REPLACE(\"81a70234-c27b-11ed-a0f5-fb79d6671c6e\", \"-\",\"\")),UNHEX(REPLACE(\"d2de2708-c27c-11ed-8b81-4b498eb56a2e\", \"-\",\"\")));"
+    # mysql -u dev -h db -pdev dev -e "insert into accesslog (id, admin_kurzel, getTime, machine_id, password_id) values (2,\"big-admin\",\"2020-01-01 13:26:26.262626\",UNHEX(REPLACE(\"91a5de62-c27b-11ed-b06e-73a6e07e676e\", \"-\",\"\")),UNHEX(REPLACE(\"e8359956-c27c-11ed-afb3-c3922f844a02\", \"-\",\"\")));"
+    # mysql -u dev -h db -pdev dev -e "insert into accesslog (id, admin_kurzel, getTime, machine_id, password_id) values (3,\"big-admin\",\"2020-01-01 14:28:28.282828\",UNHEX(REPLACE(\"a0bae91a-c27b-11ed-97d2-efbae491e385\", \"-\",\"\")),UNHEX(REPLACE(\"f5b92d0e-c27c-11ed-8728-77b6c3364352\", \"-\",\"\")));"
+
 
 fi
 

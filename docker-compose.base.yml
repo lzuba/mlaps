@@ -58,7 +58,7 @@ services:
       - "VAULT_ADDR=http://127.0.0.1:8200"
       - "VAULT_DEV_ROOT_TOKEN_ID=dev"
     healthcheck:
-      test: ["CMD", "curl", "http://127.0.0.1:8200/v1/sys/seal-status"]
+      test: ["CMD", "ls", "/tmp/shared/INITIALIZED"]
       interval: 10s
       retries: 10
       start_period: 15s
@@ -66,20 +66,18 @@ services:
   db:
     # only used for testing and development,
     # if you want to use this in production, you might want to adjust this
-   image: mysql:8-debian
-   command: --default-authentication-plugin=mysql_native_password
-   restart: always
-   cap_add:
-     - SYS_NICE
-   environment:
-     MYSQL_ROOT_PASSWORD: dev
-     MYSQL_USER: dev
-     MYSQL_PASSWORD: dev
-     MYSQL_DATABASE: dev
-   healthcheck:
-     test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
-     timeout: 2s
-     retries: 10
+    image: mysql:lts-oraclelinux9
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: dev
+      MYSQL_USER: dev
+      MYSQL_PASSWORD: dev
+      MYSQL_DATABASE: dev
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      timeout: 2s
+      start_period: 10s
+      retries: 10
 
   keycloak:
     # only used for testing and development,

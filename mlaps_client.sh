@@ -8,7 +8,8 @@ export PATH="/usr/local/bin/:/usr/local/sbin/:/opt/homebrew/bin:/opt/homebrew/sb
 SUPPORT="$SUPPORTPATH"
 ADMIN_USER_NAME="admin"
 ADMIN_USER_HOME="/Users/$ADMIN_USER_NAME"
-MLAPS_ENDPOINT="https://mlaps.$YOURCOMPANY.com/api"                 # MLAPS HOST
+MLAPS_HOSTNAME="https://mlaps.$YOURCOMPANY.com"                     # MLAPS HOST
+MLAPS_ENDPOINT="$MLAPS_HOSTNAME/api"                                # MLAPS API
 MLAPS_CA="com.$YOURCOMPANY.mlaps"                                   # MLAPS_CA
 CA_FILE="$SUPPORT/mlaps-ca.pem"                                     # Path to CA file
 PW_FILE="$SUPPORT/mlaps-password"                                   # Path to Backup Password File
@@ -38,6 +39,11 @@ T_RETRIES=3
 
 #Runtime Data
 UPDATEID=""
+CURL_EXEC=""
+BREW_CURL_FOUND=0
+
+#Security
+BASIC_AUTH="username:password"
 
 function panic(){
   # rm pidfile
@@ -48,9 +54,26 @@ function panic(){
 
 # cleanup pidfile if process is not running anymore
 function cleanupPid(){
-  pid=$(cat $PID_FILE)
-  if test -n $pid && ! ps -p $pid ; then
-    rm $PID_FILE
+  if [ -f $PID_FILE ]; then
+    PID=$(cat $PID_FILE)
+    ps -p $PID > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+      echo "Process already running"
+      exit 1
+    else
+      ## Process not found assume not running
+      echo $$ > $PID_FILE
+      if [ $? -ne 0 ]; then
+        echo "Could not create PID file"
+        exit 1
+      fi
+    fi
+  else
+    echo $$ > $PID_FILE
+    if [ $? -ne 0 ]; then
+      echo "Could not create PID file"
+      exit 1
+    fi
   fi
 }
 
@@ -86,9 +109,9 @@ function errlog(){
 trap 'panic' \
   SIGHUP SIGINT SIGQUIT SIGILL SIGTRAP SIGABRT SIGFPE \
   SIGKILL SIGBUS SIGSEGV SIGSYS SIGPIPE SIGALRM SIGTERM SIGURG \
-  SIGSTOP SIGTSTP SIGCONT SIGCHLD SIGTTIN SIGTTOU SIGIO SIGXCPU \
+  SIGSTOP SIGTSTP SIGCONT SIGTTIN SIGTTOU SIGIO SIGXCPU \
   SIGXFSZ SIGVTALRM SIGPROF SIGWINCH SIGUSR1 SIGUSR2
-  trap 'errlog' ERR                                                     # Traps errors that aren't handled and logs them without exiting
+trap 'errlog' ERR                                                     # Traps errors that aren't handled and logs them without exiting
 
 # create pid file ($pid > file)
 # exit if exists
@@ -99,10 +122,10 @@ function enroll(){
   jamflog "Generating CSR & KEY"
 
   local CSR=$(openssl req   \
-    -new              \
-    -nodes             \
-    -newkey rsa:2048    \
-    -keyout "$KEY_FILE"    \
+    -new                     \
+    -nodes                    \
+    -newkey rsa:2048           \
+    -keyout "$KEY_FILE"         \
     -subj   "$SUBJ" | tee "$CSR_FILE" | openssl base64 -e ; exit ${PIPESTATUS[0]})
 
   if [ $? ]; then
@@ -113,10 +136,15 @@ function enroll(){
     return 1
   fi
 
+  CSR=$(echo $CSR|tr -d '\n ')
   local PAYLOAD="{\"csr\":\"$CSR\", \"sn\":\"$SN\", \"hn\":\"$HN\"}"
 
-  (curl                             \
-    --cacert $CA_FILE                \
+  local extra_options=()
+  if [[ -n $BASIC_AUTH ]]; then
+    extra_options+=(-u "$BASIC_AUTH")
+  fi
+
+  ($CURL_EXEC                        \
     --request POST                    \
     --url "$MLAPS_ENDPOINT/enroll"     \
     --retry $CURL_N_RETRIES             \
@@ -124,6 +152,7 @@ function enroll(){
     --retry-delay $CURL_DELAY             \
     --retry-max-time $CURL_MAX_RETRY_TIME  \
     -H 'Content-Type: application/json'     \
+    "${extra_options[@]}"                        \
     --data "$PAYLOAD" | jq -r '.response' | tee "$CRT_FILE";  exit ${PIPESTATUS[0]} ;)
 
   if [ $? ]; then
@@ -150,12 +179,12 @@ function checkin(){
 
   local PAYLOAD="{\"sn\":\"$SN\", \"hn\":\"$HN\"}"
 
-  local CHECKIN_DATA=$(curl        \
-    --cacert $CA_FILE                \
-    --request POST                   \
-    --cert "$CRT_FILE"                \
-    --key  "$KEY_FILE"                 \
-    --data "$PAYLOAD"                   \
+  local CHECKIN_DATA=$(curl       \
+    --cacert "$CA_FILE"            \
+    --request POST                  \
+    --cert "$CRT_FILE"               \
+    --key  "$KEY_FILE"                \
+    --data "$PAYLOAD"                  \
     --url "$MLAPS_ENDPOINT/checkin"     \
     --retry $CURL_N_RETRIES              \
     --max-time $CURL_MAX_T                \
@@ -192,9 +221,8 @@ function send_pw(){
   #$(printf "$" "$1" "$2" "$UPDATEID")
   local PAYLOAD="{\"Success_Status\":\"$1\", \"Password\":\"$2\", \"updateSessionID\":\"$UPDATEID\"}"
 
-  local PW_DATA=$(curl             \
+  local PW_DATA=$($CURL_EXEC        \
     --request POST                   \
-    --cacert $CA_FILE                \
     --cert "$CRT_FILE"                \
     --key "$KEY_FILE"                  \
     --data "$PAYLOAD"                   \
@@ -259,17 +287,16 @@ function gen_passwd(){
 function send_pw_res(){
   jamflog $1
   local PAYLOAD="{\"res\":\"$1\", \"updateSessionID\":\"$UPDATEID\"}"
-  local PW_DATA=$(curl             \
-    --request POST                   \
-    --cacert $CA_FILE                \
-    --cert "$CRT_FILE"                \
-    --key "$KEY_FILE"                  \
-    --data "$PAYLOAD"                   \
-    --url "$MLAPS_ENDPOINT/password-confirm"\
-    --retry $CURL_N_RETRIES               \
-    --max-time $CURL_MAX_T                 \
-    --retry-delay $CURL_DELAY               \
-    --retry-max-time $CURL_MAX_RETRY_TIME    \
+  local PW_DATA=$($CURL_EXEC            \
+    --request POST                       \
+    --cert "$CRT_FILE"                    \
+    --key "$KEY_FILE"                      \
+    --data "$PAYLOAD"                       \
+    --url "$MLAPS_ENDPOINT/password-confirm" \
+    --retry $CURL_N_RETRIES                   \
+    --max-time $CURL_MAX_T                     \
+    --retry-delay $CURL_DELAY                   \
+    --retry-max-time $CURL_MAX_RETRY_TIME        \
     --header 'Content-Type: application/json')
 
   if [ $? -ne 0 ]; then
@@ -316,15 +343,30 @@ function set_pw(){
        fi
    done
 
+   if CURL_EXEC=$(brew --prefix curl); then
+       jamflog "Found brew curl, using instead of built-in curl"
+       CURL_EXEC="$CURL_EXEC/bin/curl"
+       BREW_CURL_FOUND=true
+   else
+       jamflog "Using built-in curl, requires "
+       CURL_EXEC='curl --cacert "$CA_FILE"'
+       BREW_CURL_FOUND=false
+   fi
+  
+   local extra_options=()
+   if [[ -n $BASIC_AUTH ]]; then
+     extra_options+=(-u "$BASIC_AUTH")
+   fi
+
    #check/wait for a internet connection
-   while ! curl --cacert $CA_FILE -Is https://mlaps.$YOURCOMPANY.com &> /dev/null ; do
+   while ! $CURL_EXEC ${extra_options[@]} -Is $MLAPS_HOSTNAME/ping &> /dev/null ; do
      sleep 1
    done
 
    shlock -f $PID_FILE -p $$ || cleanupPid
 
    if [ -s "$UPDATE_ID_FILE" ]; then
-     jamflog "Found valid updatesession id..."
+     jamflog "Found updatesession id..."
      UPDATEID="$(<"$UPDATE_ID_FILE")"
      set_pw
    else
