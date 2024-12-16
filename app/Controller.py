@@ -412,7 +412,7 @@ class Controller():
     """
     def handleCreateShareLink(self, mid, pw, admin_name) -> str:
         tempStr: str = self.get_random_string(32)
-        curTime: datetime.datetime = datetime.datetime.utcnow()
+        curTime: datetime.datetime = datetime.datetime.now(datetime.timezone.utc)
 
         #create access log entry
         self.__mysqlConx.createAccessEntry(admin_name, mid, self.__mysqlConx.getLatestSuccessfulPassword(uuid.UUID(mid)).id)
