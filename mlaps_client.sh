@@ -139,9 +139,9 @@ function enroll(){
   CSR=$(echo $CSR|tr -d '\n ')
   local PAYLOAD="{\"csr\":\"$CSR\", \"sn\":\"$SN\", \"hn\":\"$HN\"}"
 
-  local extra_options=()
+  local curl_command=()
   if [[ -n $BASIC_AUTH ]]; then
-    extra_options+=(-u "$BASIC_AUTH")
+    curl_command+=(-u "$BASIC_AUTH")
   fi
 
   ($CURL_EXEC                        \
@@ -152,7 +152,7 @@ function enroll(){
     --retry-delay $CURL_DELAY             \
     --retry-max-time $CURL_MAX_RETRY_TIME  \
     -H 'Content-Type: application/json'     \
-    "${extra_options[@]}"                        \
+    "${curl_command[@]}"                        \
     --data "$PAYLOAD" | jq -r '.response' | tee "$CRT_FILE";  exit ${PIPESTATUS[0]} ;)
 
   if [ $? ]; then
@@ -343,23 +343,26 @@ function set_pw(){
        fi
    done
 
-   if CURL_EXEC=$(brew --prefix curl); then
+   local curl_command=()
+   consoleuser=$(scutil <<< "show State:/Users/ConsoleUser" | awk '/Name :/ && ! /loginwindow/ { print $3 }' )
+   
+   if CURL_EXEC=$(/bin/launchctl asuser $(id -u "$consoleuser")  /usr/bin/sudo --login --user "$consoleuser" brew --prefix curl); then
        jamflog "Found brew curl, using instead of built-in curl"
-       CURL_EXEC="$CURL_EXEC/bin/curl"
+       curl_command+=("$CURL_EXEC/bin/curl")
        BREW_CURL_FOUND=true
    else
-       jamflog "Using built-in curl, requires "
-       CURL_EXEC='curl --cacert "$CA_FILE"'
+       jamflog "Using built-in curl, requires CA file to be present"
+       curl_command+=(curl --cacert)
+       curl_command+=("$CA_FILE")
        BREW_CURL_FOUND=false
    fi
-  
-   local extra_options=()
+
    if [[ -n $BASIC_AUTH ]]; then
-     extra_options+=(-u "$BASIC_AUTH")
+     curl_command+=(-u "$BASIC_AUTH")
    fi
 
    #check/wait for a internet connection
-   while ! $CURL_EXEC ${extra_options[@]} -Is $MLAPS_HOSTNAME/ping &> /dev/null ; do
+   while ! "${curl_command[@]}" -Is $MLAPS_HOSTNAME/ping &> /dev/null ; do
      sleep 1
    done
 
