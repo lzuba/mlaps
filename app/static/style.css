@@ -5,3 +5,8 @@ body {
 a {
     color: #FFF;
 }
+
+#pw-text {
+    font-family: monospace;
+    font-size: 30px;
+}
