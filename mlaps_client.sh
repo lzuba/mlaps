@@ -39,7 +39,8 @@ T_RETRIES=3
 
 #Runtime Data
 UPDATEID=""
-CURL_EXEC=""
+CURL_BASIC=()
+CURL_EXEC=()
 BREW_CURL_FOUND=0
 
 #Security
@@ -139,12 +140,7 @@ function enroll(){
   CSR=$(echo $CSR|tr -d '\n ')
   local PAYLOAD="{\"csr\":\"$CSR\", \"sn\":\"$SN\", \"hn\":\"$HN\"}"
 
-  local curl_command=()
-  if [[ -n $BASIC_AUTH ]]; then
-    curl_command+=(-u "$BASIC_AUTH")
-  fi
-
-  ($CURL_EXEC                        \
+  ("${CURL_BASIC[@]}"                 \
     --request POST                    \
     --url "$MLAPS_ENDPOINT/enroll"     \
     --retry $CURL_N_RETRIES             \
@@ -152,7 +148,6 @@ function enroll(){
     --retry-delay $CURL_DELAY             \
     --retry-max-time $CURL_MAX_RETRY_TIME  \
     -H 'Content-Type: application/json'     \
-    "${curl_command[@]}"                        \
     --data "$PAYLOAD" | jq -r '.response' | tee "$CRT_FILE";  exit ${PIPESTATUS[0]} ;)
 
   if [ $? ]; then
@@ -179,8 +174,7 @@ function checkin(){
 
   local PAYLOAD="{\"sn\":\"$SN\", \"hn\":\"$HN\"}"
 
-  local CHECKIN_DATA=$(curl       \
-    --cacert "$CA_FILE"            \
+  local CHECKIN_DATA=$("${CURL_EXEC[@]}" \
     --request POST                  \
     --cert "$CRT_FILE"               \
     --key  "$KEY_FILE"                \
@@ -221,7 +215,7 @@ function send_pw(){
   #$(printf "$" "$1" "$2" "$UPDATEID")
   local PAYLOAD="{\"Success_Status\":\"$1\", \"Password\":\"$2\", \"updateSessionID\":\"$UPDATEID\"}"
 
-  local PW_DATA=$($CURL_EXEC        \
+  local PW_DATA=$("${CURL_EXEC[@]}" \
     --request POST                   \
     --cert "$CRT_FILE"                \
     --key "$KEY_FILE"                  \
@@ -287,7 +281,7 @@ function gen_passwd(){
 function send_pw_res(){
   jamflog $1
   local PAYLOAD="{\"res\":\"$1\", \"updateSessionID\":\"$UPDATEID\"}"
-  local PW_DATA=$($CURL_EXEC            \
+  local PW_DATA=$("${CURL_EXEC[@]}"     \
     --request POST                       \
     --cert "$CRT_FILE"                    \
     --key "$KEY_FILE"                      \
@@ -343,27 +337,36 @@ function set_pw(){
        fi
    done
 
-   local curl_command=()
    consoleuser=$(scutil <<< "show State:/Users/ConsoleUser" | awk '/Name :/ && ! /loginwindow/ { print $3 }' )
-   
-   if CURL_EXEC=$(/bin/launchctl asuser $(id -u "$consoleuser")  /usr/bin/sudo --login --user "$consoleuser" brew --prefix curl); then
+   brew_curl=$(/bin/launchctl asuser $(id -u "$consoleuser")  /usr/bin/sudo --login --user "$consoleuser" brew --prefix curl)
+   if ls -l "$brew_curl/bin/curl"; then
        jamflog "Found brew curl, using instead of built-in curl"
-       curl_command+=("$CURL_EXEC/bin/curl")
+       CURL_BASIC+=("$brew_curl/bin/curl")
+       CURL_EXEC+=("$brew_curl/bin/curl")
        BREW_CURL_FOUND=true
    else
        jamflog "Using built-in curl, requires CA file to be present"
-       curl_command+=(curl --cacert)
-       curl_command+=("$CA_FILE")
+       CURL_BASIC+=(curl --cacert "$CA_FILE")
+       CURL_EXEC+=(curl --cacert "$CA_FILE")
        BREW_CURL_FOUND=false
    fi
 
    if [[ -n $BASIC_AUTH ]]; then
-     curl_command+=(-u "$BASIC_AUTH")
+     CURL_BASIC+=(-u "$BASIC_AUTH")
    fi
 
    #check/wait for a internet connection
-   while ! "${curl_command[@]}" -Is $MLAPS_HOSTNAME/ping &> /dev/null ; do
-     sleep 1
+   attempt=1
+   while true; do
+    response=$("${CURL_BASIC[@]}" -s --max-time 10 $MLAPS_HOSTNAME/ping )
+    if [[ "$response" == "pong" ]]; then
+      break
+    fi
+    if [ $attempt -gt 10 ]; then
+      exit 10
+    fi
+    ((attempt++))
+    sleep 1
    done
 
    shlock -f $PID_FILE -p $$ || cleanupPid
