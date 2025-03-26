@@ -512,7 +512,7 @@
     "alwaysDisplayInConsole" : false,
     "clientAuthenticatorType" : "client-secret",
     "secret" : "7mF1V9zO8wsZIHOicQBAsqsYCaUqJqkC",
-    "redirectUris" : [ "https://mlaps.$YOURCOMPANY.com/authorize" ],
+    "redirectUris" : [ "https://mlaps.$YOURCOMPANY.com/oidc_callback" ],
     "webOrigins" : [ "https://mlaps.$YOURCOMPANY.com" ],
     "notBefore" : 0,
     "bearerOnly" : false,
