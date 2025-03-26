@@ -429,7 +429,7 @@ class Controller():
         logging.getLogger('mlaps').debug(randomStr)
         if randomStr in self.__shareLinks:
             entry: dict = self.__shareLinks[randomStr]
-            curTime: datetime.datetime = datetime.datetime.utcnow()
+            curTime: datetime.datetime = datetime.datetime.now(datetime.timezone.utc)
             if (entry['creationTime'] + datetime.timedelta(minutes=15)) > curTime:
                 logging.getLogger('mlaps').info("Found valid share link")
                 return True
